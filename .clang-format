@@ -1,0 +1,23 @@
+---
+AlignAfterOpenBracket: AlwaysBreak
+AlignEscapedNewlines: DontAlign
+AllowShortBlocksOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+BasedOnStyle: LLVM
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Attach
+ColumnLimit: 79
+ContinuationIndentWidth: 4
+IncludeBlocks: Regroup
+IndentCaseLabels: true
+IndentWidth: 2
+MaxEmptyLinesToKeep: 1
+PointerAlignment: Left
+SeparateDefinitionBlocks: Always
+SpaceBeforeParens: ControlStatements
+SpacesBeforeTrailingComments: 1
+UseTab: Never
+...
