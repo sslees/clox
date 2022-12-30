@@ -1,5 +1,5 @@
-#ifndef clox_scanner_h
-#define clox_scanner_h
+#ifndef CLOX_SCANNER_H
+#define CLOX_SCANNER_H
 
 typedef enum { // clang-format off
   // Single-character tokens.

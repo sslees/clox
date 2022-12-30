@@ -1,5 +1,5 @@
-#ifndef clox_value_h
-#define clox_value_h
+#ifndef CLOX_VALUE_H
+#define CLOX_VALUE_H
 
 #include "common.h"
 
@@ -11,7 +11,7 @@ typedef struct ObjString ObjString;
 #ifdef NAN_BOXING
 
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
-#define QNAN ((uint64_t)0x7ffc000000000000)
+#define QNAN ((uint64_t)0x7FFC000000000000)
 
 #define TAG_NIL 1   // 01.
 #define TAG_FALSE 2 // 10.

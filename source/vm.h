@@ -1,5 +1,5 @@
-#ifndef clox_vm_h
-#define clox_vm_h
+#ifndef CLOX_VM_H
+#define CLOX_VM_H
 
 #include "object.h"
 #include "table.h"

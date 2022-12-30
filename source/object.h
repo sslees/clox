@@ -1,5 +1,5 @@
-#ifndef clox_object_h
-#define clox_object_h
+#ifndef CLOX_OBJECT_H
+#define CLOX_OBJECT_H
 
 #include "chunk.h"
 #include "common.h"
