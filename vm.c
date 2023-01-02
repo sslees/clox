@@ -283,8 +283,9 @@ static InterpretResult run() {
         &frame->closure->function->chunk,
         (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
-    uint8_t instruction;
-    switch (instruction = READ_BYTE()) {
+
+    uint8_t instruction = READ_BYTE();
+    switch (instruction) {
       case OP_CONSTANT: {
         Value constant = READ_CONSTANT();
         push(constant);

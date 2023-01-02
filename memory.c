@@ -49,11 +49,11 @@ void markObject(Obj* object) {
     vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
     vm.grayStack =
         (Obj**)realloc(vm.grayStack, sizeof(Obj*) * vm.grayCapacity);
+
+    if (vm.grayStack == NULL) exit(1);
   }
 
   vm.grayStack[vm.grayCount++] = object;
-
-  if (vm.grayStack == NULL) exit(1);
 }
 
 void markValue(Value value) {
@@ -200,17 +200,6 @@ static void sweep() {
   }
 }
 
-void freeObjects() {
-  Obj* object = vm.objects;
-  while (object != NULL) {
-    Obj* next = object->next;
-    freeObject(object);
-    object = next;
-  }
-
-  free(vm.grayStack);
-}
-
 void collectGarbage() {
 #ifdef DEBUG_LOG_GC
   printf("-- gc begin\n");
@@ -230,4 +219,15 @@ void collectGarbage() {
       "   collected %zu bytes (from %zu to %zu) next at %zu\n",
       before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
 #endif
+}
+
+void freeObjects() {
+  Obj* object = vm.objects;
+  while (object != NULL) {
+    Obj* next = object->next;
+    freeObject(object);
+    object = next;
+  }
+
+  free(vm.grayStack);
 }
