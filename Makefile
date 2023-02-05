@@ -1,7 +1,7 @@
 NAME ?= clox
 
 CFLAGS += -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter
-CFLAGS += -DCONSTANT_MAX=255
+CFLAGS += -DCONSTANTS_MAX=255
 
 DFLAGS = -Og -g3 --coverage -DDEBUG
 RFLAGS = -O3 -flto
@@ -16,13 +16,10 @@ TEST = cd $(HOME)/downloads/craftinginterpreters; \
 	dart tool/bin/test.dart clox --interpreter $(CURDIR)/$(1)
 BENCH = find bench -type f -exec echo -n {} " " \; -exec $(1) {} \;
 
-$(NAME): build/release/$(NAME) build/debug/$(NAME)
-	ln -sf $< .
-
-release: build/release/$(NAME)
-	ln -sf $< .
-
 debug: build/debug/$(NAME)
+	ln -sf $< .
+
+release $(NAME): build/release/$(NAME)
 	ln -sf $< .
 
 build/release/$(NAME): build/profile/$(NAME)

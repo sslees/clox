@@ -21,15 +21,15 @@ typedef struct {
 
 typedef enum {
   PREC_NONE,
-  PREC_ASSIGNMENT, // =
-  PREC_OR,         // or
-  PREC_AND,        // and
-  PREC_EQUALITY,   // == !=
-  PREC_COMPARISON, // < > <= >=
-  PREC_TERM,       // + -
-  PREC_FACTOR,     // * /
-  PREC_UNARY,      // ! -
-  PREC_CALL,       // . ()
+  PREC_ASSIGNMENT,
+  PREC_OR,
+  PREC_AND,
+  PREC_EQUALITY,
+  PREC_COMPARISON,
+  PREC_TERM,
+  PREC_FACTOR,
+  PREC_UNARY,
+  PREC_CALL,
   PREC_PRIMARY
 } Precedence;
 
@@ -91,7 +91,6 @@ static void errorAt(Token* token, const char* message) {
   if (token->type == TOKEN_EOF) {
     fprintf(stderr, " at end");
   } else if (token->type == TOKEN_ERROR) {
-    // Nothing.
   } else {
     fprintf(stderr, " at '%.*s'", token->length, token->start);
   }
@@ -111,7 +110,7 @@ static void errorAtCurrent(const char* message) {
 static void advance() {
   parser.previous = parser.current;
 
-  for (;;) {
+  while (true) {
     parser.current = scanToken();
     if (parser.current.type != TOKEN_ERROR) break;
 
@@ -165,18 +164,13 @@ static int emitJump(uint8_t instruction) {
 }
 
 static void emitReturn() {
-  if (current->type == TYPE_INITIALIZER) {
-    emitBytes(OP_GET_LOCAL, 0);
-  } else {
-    emitByte(OP_NIL);
-  }
-
-  emitByte(OP_RETURN);
+  emitBytes(
+      current->type == TYPE_INITIALIZER ? OP_GET_THIS : OP_NIL, OP_RETURN);
 }
 
 static uint16_t makeConstant(Value value) {
   int constant = addConstant(currentChunk(), value);
-  if (constant > CONSTANT_MAX) {
+  if (constant > CONSTANTS_MAX) {
     error("Too many constants in one chunk.");
     return 0;
   }
@@ -199,7 +193,6 @@ static void emitConstant(Value value) {
 }
 
 static void patchJump(int offset) {
-  // -2 to adjust for the bytecode for the jump offset itself.
   int jump = currentChunk()->count - offset - 2;
 
   if (jump > UINT16_MAX) { error("Too much code to jump over."); }
@@ -404,23 +397,38 @@ static void and_(bool canAssign) {
   patchJump(endJump);
 }
 
+static void simplify(OpCode first, OpCode second, OpCode combined) {
+  if (currentChunk()->code[currentChunk()->count - 1] == first) {
+    amendChunk(currentChunk(), 1);
+    emitByte(combined);
+  } else {
+    emitByte(second);
+  }
+}
+
 static void binary(bool canAssign) {
   TokenType operatorType = parser.previous.type;
   ParseRule* rule = getRule(operatorType);
   parsePrecedence((Precedence)(rule->precedence + 1));
 
   switch (operatorType) {
-    case TOKEN_BANG_EQUAL: emitBytes(OP_EQUAL, OP_NOT); break;
-    case TOKEN_EQUAL_EQUAL: emitByte(OP_EQUAL); break;
+    case TOKEN_BANG_EQUAL: emitByte(OP_NOT_EQUAL); break;
+    case TOKEN_EQUAL_EQUAL:
+      simplify(OP_CONSTANT_ZERO, OP_EQUAL, OP_EQUAL_ZERO);
+      break;
     case TOKEN_GREATER: emitByte(OP_GREATER); break;
-    case TOKEN_GREATER_EQUAL: emitBytes(OP_LESS, OP_NOT); break;
+    case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL); break;
     case TOKEN_LESS: emitByte(OP_LESS); break;
-    case TOKEN_LESS_EQUAL: emitBytes(OP_GREATER, OP_NOT); break;
-    case TOKEN_PLUS: emitByte(OP_ADD); break;
-    case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
-    case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
+    case TOKEN_LESS_EQUAL: emitByte(OP_LESS_EQUAL); break;
+    case TOKEN_PLUS: simplify(OP_CONSTANT_ONE, OP_ADD, OP_ADD_ONE); break;
+    case TOKEN_MINUS:
+      simplify(OP_CONSTANT_ONE, OP_SUBTRACT, OP_SUBTRACT_ONE);
+      break;
+    case TOKEN_STAR:
+      simplify(OP_CONSTANT_TWO, OP_MULTIPLY, OP_MULTIPLY_TWO);
+      break;
     case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
-    default: return; // Unreachable.
+    default: return;
   }
 }
 
@@ -453,7 +461,7 @@ static void literal(bool canAssign) {
     case TOKEN_FALSE: emitByte(OP_FALSE); break;
     case TOKEN_NIL: emitByte(OP_NIL); break;
     case TOKEN_TRUE: emitByte(OP_TRUE); break;
-    default: return; // Unreachable.
+    default: return;
   }
 }
 
@@ -464,7 +472,21 @@ static void grouping(bool canAssign) {
 
 static void number(bool canAssign) {
   double value = strtod(parser.previous.start, NULL);
-  emitConstant(NUMBER_VAL(value));
+  if (value == 0) {
+    emitByte(OP_CONSTANT_ZERO);
+  } else if (value == 1) {
+    emitByte(OP_CONSTANT_ONE);
+  } else if (value == 2) {
+    emitByte(OP_CONSTANT_TWO);
+  } else if (value == 3) {
+    emitByte(OP_CONSTANT_THREE);
+  } else if (value == 4) {
+    emitByte(OP_CONSTANT_FOUR);
+  } else if (value == 5) {
+    emitByte(OP_CONSTANT_FIVE);
+  } else {
+    emitConstant(NUMBER_VAL(value));
+  }
 }
 
 static void or_(bool canAssign) {
@@ -508,6 +530,8 @@ static void namedVariable(Token name, bool canAssign) {
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
     emitBytes(setOp, (uint8_t)arg);
+  } else if (getOp == OP_GET_LOCAL && arg == 0) {
+    emitByte(OP_GET_THIS);
   } else {
     emitBytes(getOp, (uint8_t)arg);
   }
@@ -561,14 +585,13 @@ static void this_(bool canAssign) {
 static void unary(bool canAssign) {
   TokenType operatorType = parser.previous.type;
 
-  // Compile the operand.
   parsePrecedence(PREC_UNARY);
-
-  // Emit the operator instruction.
   switch (operatorType) {
     case TOKEN_BANG: emitByte(OP_NOT); break;
-    case TOKEN_MINUS: emitByte(OP_NEGATE); break;
-    default: return; // Unreachable.
+    case TOKEN_MINUS:
+      simplify(OP_CONSTANT_ONE, OP_NEGATE, OP_CONSTANT_NEGATIVE_ONE);
+      break;
+    default: return;
   }
 }
 
@@ -674,7 +697,7 @@ static void function(FunctionType type) {
   emitConstantIndex(OBJ_VAL(function));
 
   for (int i = 0; i < function->upvalueCount; i++) {
-    emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+    emitByte(compiler.upvalues[i].isLocal ? true : false);
     emitByte(compiler.upvalues[i].index);
   }
 }
@@ -767,7 +790,6 @@ static void forStatement() {
   beginScope();
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
   if (match(TOKEN_SEMICOLON)) {
-    // No initializer.
   } else if (match(TOKEN_VAR)) {
     varDeclaration();
   } else {
@@ -779,10 +801,8 @@ static void forStatement() {
   if (!match(TOKEN_SEMICOLON)) {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
-
-    // Jump out of the loop if the condition is false.
     exitJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP); // Condition.
+    emitByte(OP_POP);
   }
 
   if (!match(TOKEN_RIGHT_PAREN)) {
@@ -802,7 +822,7 @@ static void forStatement() {
 
   if (exitJump != -1) {
     patchJump(exitJump);
-    emitByte(OP_POP); // Condition.
+    emitByte(OP_POP);
   }
 
   endScope();
@@ -879,8 +899,7 @@ static void synchronize() {
       case TOKEN_WHILE:
       case TOKEN_PRINT:
       case TOKEN_RETURN: return;
-
-      default:; // Do nothing.
+      default:;
     }
 
     advance();

@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "clox",
+            "name": "clox - repl",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/clox",
@@ -25,15 +25,15 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "gcc"
+            "preLaunchTask": "makeDebug"
         },
         {
-            "name": "clox temp.lox",
+            "name": "clox - script",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/clox",
             "args": [
-                "temp.lox"
+                "${input:script}"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -53,7 +53,15 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "gcc"
+            "preLaunchTask": "makeDebug"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "script",
+            "type": "promptString",
+            "description": "the Lox script to execute",
+            "default": "temp.lox"
         }
     ]
 }

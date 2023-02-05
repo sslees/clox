@@ -5,8 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef CONSTANT_MAX
-#define CONSTANT_MAX UINT16_MAX
+#ifndef CONSTANTS_MAX
+#define CONSTANTS_MAX UINT16_MAX
 #endif
 
 #define NAN_BOXING

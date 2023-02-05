@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "*.h": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "exception": "c",
+        "new": "c"
     }
 }

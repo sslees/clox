@@ -33,13 +33,11 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
   chunk->code[chunk->count] = byte;
   chunk->count++;
 
-  // See if we're still on the same line.
   if (chunk->lineCount > 0 &&
       chunk->lines[chunk->lineCount - 1].line == line) {
     return;
   }
 
-  // Append a new LineStart.
   if (chunk->lineCapacity < chunk->lineCount + 1) {
     int oldCapacity = chunk->lineCapacity;
     chunk->lineCapacity = GROW_CAPACITY(oldCapacity);
@@ -50,6 +48,10 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
   LineStart* lineStart = &chunk->lines[chunk->lineCount++];
   lineStart->offset = chunk->count - 1;
   lineStart->line = line;
+}
+
+void amendChunk(Chunk* chunk, int bytes) {
+  chunk->count = chunk->count > bytes ? chunk->count - bytes : 0;
 }
 
 int addConstant(Chunk* chunk, Value value) {
@@ -63,7 +65,7 @@ int getLine(Chunk* chunk, int instruction) {
   int start = 0;
   int end = chunk->lineCount - 1;
 
-  for (;;) {
+  while (true) {
     int mid = (start + end) / 2;
     LineStart* line = &chunk->lines[mid];
     if (instruction < line->offset) {

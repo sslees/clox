@@ -71,7 +71,7 @@ static Token errorToken(const char* message) {
 }
 
 static void skipWhitespace() {
-  for (;;) {
+  while (true) {
     char c = peek();
     switch (c) {
       case ' ':
@@ -83,7 +83,6 @@ static void skipWhitespace() {
         break;
       case '/':
         if (peekNext() == '/') {
-          // A comment goes until the end of the line.
           while (peek() != '\n' && !isAtEnd()) advance();
         } else {
           return;
@@ -146,12 +145,8 @@ static Token identifier() {
 
 static Token number() {
   while (isDigit(peek())) advance();
-
-  // Look for a fractional part.
   if (peek() == '.' && isDigit(peekNext())) {
-    // Consume the ".".
     advance();
-
     while (isDigit(peek())) advance();
   }
 
@@ -166,7 +161,6 @@ static Token string() {
 
   if (isAtEnd()) return errorToken("Unterminated string.");
 
-  // The closing quote.
   advance();
   return makeToken(TOKEN_STRING);
 }

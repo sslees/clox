@@ -41,7 +41,22 @@ typedef enum {
   OP_RETURN,
   OP_CLASS,
   OP_INHERIT,
-  OP_METHOD
+  OP_METHOD,
+  OP_CONSTANT_NEGATIVE_ONE,
+  OP_CONSTANT_ZERO,
+  OP_CONSTANT_ONE,
+  OP_CONSTANT_TWO,
+  OP_CONSTANT_THREE,
+  OP_CONSTANT_FOUR,
+  OP_CONSTANT_FIVE,
+  OP_ADD_ONE,
+  OP_SUBTRACT_ONE,
+  OP_MULTIPLY_TWO,
+  OP_EQUAL_ZERO,
+  OP_NOT_EQUAL,
+  OP_GREATER_EQUAL,
+  OP_LESS_EQUAL,
+  OP_GET_THIS
 } OpCode;
 
 typedef struct {
@@ -62,6 +77,7 @@ typedef struct {
 void initChunk(Chunk* chunk);
 void freeChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
+void amendChunk(Chunk* chunk, int bytes);
 int addConstant(Chunk* chunk, Value value);
 int getLine(Chunk* chunk, int instruction);
 

@@ -141,7 +141,7 @@ static bool callValue(Value callee, int argCount) {
         push(result);
         return true;
       }
-      default: break; // Non-callable object type.
+      default: break;
     }
   }
   runtimeError("Can only call functions and classes.");
@@ -270,7 +270,7 @@ static InterpretResult run() {
     push(valueType(a op b)); \
   } while (false)
 
-  for (;;) {
+  while (true) {
 #ifdef DEBUG_TRACE_EXECUTION
     printf("          ");
     for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
@@ -284,7 +284,7 @@ static InterpretResult run() {
         (int)(frame->ip - frame->closure->function->chunk.code));
 #endif
 
-    uint8_t instruction = READ_BYTE();
+    OpCode instruction = READ_BYTE();
     switch (instruction) {
       case OP_CONSTANT: {
         Value constant = READ_CONSTANT();
@@ -351,7 +351,7 @@ static InterpretResult run() {
 
         Value value;
         if (tableGet(&instance->fields, name, &value)) {
-          pop(); // Instance.
+          pop();
           push(value);
           break;
         }
@@ -389,7 +389,7 @@ static InterpretResult run() {
       }
       case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
       case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
-      case OP_ADD: {
+      case OP_ADD:
         if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
           concatenate();
         } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
@@ -401,7 +401,6 @@ static InterpretResult run() {
           return INTERPRET_RUNTIME_ERROR;
         }
         break;
-      }
       case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
       case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
       case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
@@ -413,11 +412,10 @@ static InterpretResult run() {
         }
         push(NUMBER_VAL(-AS_NUMBER(pop())));
         break;
-      case OP_PRINT: {
+      case OP_PRINT:
         printValue(pop());
         printf("\n");
         break;
-      }
       case OP_JUMP: {
         uint16_t offset = READ_SHORT();
         frame->ip += offset;
@@ -501,10 +499,52 @@ static InterpretResult run() {
 
         ObjClass* subclass = AS_CLASS(peek(0));
         tableAddAll(&AS_CLASS(superclass)->methods, &subclass->methods);
-        pop(); // Subclass.
+        pop();
         break;
       }
       case OP_METHOD: defineMethod(READ_STRING()); break;
+      case OP_CONSTANT_NEGATIVE_ONE: push(NUMBER_VAL(-1)); break;
+      case OP_CONSTANT_ZERO: push(NUMBER_VAL(0)); break;
+      case OP_CONSTANT_ONE: push(NUMBER_VAL(1)); break;
+      case OP_CONSTANT_TWO: push(NUMBER_VAL(2)); break;
+      case OP_CONSTANT_THREE: push(NUMBER_VAL(3)); break;
+      case OP_CONSTANT_FOUR: push(NUMBER_VAL(4)); break;
+      case OP_CONSTANT_FIVE: push(NUMBER_VAL(5)); break;
+      case OP_ADD_ONE:
+        if (!IS_NUMBER(peek(0))) {
+          runtimeError("Operands must be two numbers or two strings.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        push(NUMBER_VAL(AS_NUMBER(pop()) + 1));
+        break;
+      case OP_SUBTRACT_ONE:
+        if (!IS_NUMBER(peek(0))) {
+          runtimeError("Operands must be numbers.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        push(NUMBER_VAL(AS_NUMBER(pop()) - 1));
+        break;
+      case OP_MULTIPLY_TWO:
+        if (!IS_NUMBER(peek(0))) {
+          runtimeError("Operands must be numbers.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        push(NUMBER_VAL(AS_NUMBER(pop()) * 2));
+        break;
+      case OP_EQUAL_ZERO: {
+        Value a = pop();
+        push(BOOL_VAL(IS_NUMBER(a) && AS_NUMBER(a) == 0));
+        break;
+      }
+      case OP_NOT_EQUAL: {
+        Value b = pop();
+        Value a = pop();
+        push(BOOL_VAL(!valuesEqual(a, b)));
+        break;
+      }
+      case OP_GREATER_EQUAL: BINARY_OP(BOOL_VAL, >=); break;
+      case OP_LESS_EQUAL: BINARY_OP(BOOL_VAL, <=); break;
+      case OP_GET_THIS: push(*frame->slots); break;
     }
   }
 

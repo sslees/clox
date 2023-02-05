@@ -2,29 +2,21 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "cppbuild",
-            "label": "gcc",
-            "command": "gcc",
+            "type": "shell",
+            "label": "makeDebug",
+            "command": "make",
             "args": [
-                "-std=c99",
-                "-Wall",
-                "-Wextra",
-                "-Werror",
-                "-Wno-unused-parameter",
-                "-O0",
-                "-DDEBUG",
-                "-fdiagnostics-color=always",
-                "-g",
-                "-o",
-                "clox",
-                "*.c"
+                "format",
+                "debug"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": [
-                "$gcc"
-            ],
+            "presentation": {
+                "reveal": "never",
+                "panel": "new",
+                "close": true
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true
