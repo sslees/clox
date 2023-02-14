@@ -53,8 +53,30 @@ static void defineNative(const char* name, NativeFn function) {
   pop();
 }
 
+static void slotsNeeded(int slots) {
+  if (vm.stackCapacity < (vm.stackTop - vm.stack) + slots) {
+    int oldCapacity = vm.stackCapacity;
+    while (vm.stackCapacity < (vm.stackTop - vm.stack) + slots)
+      vm.stackCapacity = GROW_CAPACITY(vm.stackCapacity);
+    Value* oldStack = vm.stack;
+    vm.stack = GROW_ARRAY(Value, vm.stack, oldCapacity, vm.stackCapacity);
+    if (vm.stack != oldStack) {
+      vm.stackTop = vm.stack + (vm.stackTop - oldStack);
+      for (int i = 0; i < vm.frameCount; i++) {
+        CallFrame* frame = &vm.frames[i];
+        frame->slots = vm.stack + (frame->slots - oldStack);
+      }
+      for (ObjUpvalue* uv = vm.openUpvalues; uv != NULL; uv = uv->next)
+        uv->location = vm.stack + (uv->location - oldStack);
+    }
+  }
+}
+
 void initVM() {
+  vm.stack = NULL;
+  vm.stackCapacity = 0;
   resetStack();
+  slotsNeeded(2);
   vm.objects = NULL;
   vm.bytesAllocated = 0;
   vm.nextGC = 1024 * 1024;
@@ -73,6 +95,7 @@ void initVM() {
 }
 
 void freeVM() {
+  FREE_ARRAY(Value*, vm.stack, vm.stackCapacity);
   freeTable(&vm.globals);
   freeTable(&vm.strings);
   vm.initString = NULL;
@@ -80,13 +103,11 @@ void freeVM() {
 }
 
 void push(Value value) {
-  *vm.stackTop = value;
-  vm.stackTop++;
+  *vm.stackTop++ = value;
 }
 
 Value pop() {
-  vm.stackTop--;
-  return *vm.stackTop;
+  return *--vm.stackTop;
 }
 
 static Value peek(int distance) {
@@ -105,6 +126,7 @@ static bool call(ObjClosure* closure, int argCount) {
     runtimeError("Stack overflow.");
     return false;
   }
+  slotsNeeded(closure->function->chunk.slots);
 
   CallFrame* frame = &vm.frames[vm.frameCount++];
   frame->closure = closure;
@@ -279,7 +301,7 @@ static InterpretResult run() {
       printf(" ]");
     }
     printf("\n");
-    disassembleInstruction(
+    disassembleInstr(
         &frame->closure->function->chunk,
         (int)(frame->ip - frame->closure->function->chunk.code));
 #endif

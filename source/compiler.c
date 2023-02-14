@@ -3,6 +3,7 @@
 #include "common.h"
 #include "memory.h"
 #include "scanner.h"
+#include "slots.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,6 +69,7 @@ typedef struct Compiler {
   int localCount;
   Upvalue upvalues[UINT8_COUNT];
   int scopeDepth;
+  SlotUsage usage;
 } Compiler;
 
 typedef struct ClassCompiler {
@@ -141,41 +143,12 @@ static void emitByte(uint8_t byte) {
   writeChunk(currentChunk(), byte, parser.previous.line);
 }
 
-static void emitBytes(uint8_t byte1, uint8_t byte2) {
-  emitByte(byte1);
-  emitByte(byte2);
-}
-
-static void emitLoop(int loopStart) {
-  emitByte(OP_LOOP);
-
-  int offset = currentChunk()->count - loopStart + 2;
-  if (offset > UINT16_MAX) error("Loop body too large.");
-
-  emitByte(offset & 0xFF);
-  emitByte((offset >> 8) & 0xFF);
-}
-
-static int emitJump(uint8_t instruction) {
-  emitByte(instruction);
-  emitByte(0xFF);
-  emitByte(0xFF);
-  return currentChunk()->count - 2;
-}
-
-static void emitReturn() {
-  emitBytes(
-      current->type == TYPE_INITIALIZER ? OP_GET_THIS : OP_NIL, OP_RETURN);
-}
-
-static uint16_t makeConstant(Value value) {
-  int constant = addConstant(currentChunk(), value);
-  if (constant > CONSTANTS_MAX) {
-    error("Too many constants in one chunk.");
-    return 0;
-  }
-
-  return (uint16_t)constant;
+static void emitOp(OpCode op) {
+  SlotUsage usage = getUsage(op);
+  if (current->usage.delta + usage.peak > current->usage.peak)
+    current->usage.peak = current->usage.delta + usage.peak;
+  current->usage.delta += usage.delta;
+  emitByte((uint8_t)op);
 }
 
 static void emitShort(uint16_t bytes) {
@@ -183,12 +156,41 @@ static void emitShort(uint16_t bytes) {
   emitByte((uint8_t)((bytes >> 8) & 0xFF));
 }
 
+static void emitLoop(int loopStart) {
+  emitOp(OP_LOOP);
+  int offset = currentChunk()->count - loopStart + 2;
+  if (offset > UINT16_MAX) error("Loop body too large.");
+  emitShort(offset);
+}
+
+static int emitJump(uint8_t jumpOp) {
+  emitOp(jumpOp);
+  emitByte(0xFF);
+  emitByte(0xFF);
+  return currentChunk()->count - 2;
+}
+
+static void emitReturn() {
+  emitOp(current->type == TYPE_INITIALIZER ? OP_GET_THIS : OP_NIL);
+  emitOp(OP_RETURN);
+}
+
+static uint16_t makeConstant(Value value) {
+  int index = addConstant(currentChunk(), value);
+  if (index == CONSTANTS_MAX) {
+    error("Too many constants in one chunk.");
+    return 0;
+  }
+
+  return (uint16_t)index;
+}
+
 static void emitConstantIndex(Value value) {
   emitShort(makeConstant(value));
 }
 
 static void emitConstant(Value value) {
-  emitByte(OP_CONSTANT);
+  emitOp(OP_CONSTANT);
   emitConstantIndex(value);
 }
 
@@ -207,6 +209,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
   compiler->type = type;
   compiler->localCount = 0;
   compiler->scopeDepth = 0;
+  compiler->usage = (SlotUsage){0, 0};
   compiler->function = newFunction();
   current = compiler;
   if (type != TYPE_SCRIPT) {
@@ -229,6 +232,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
 static ObjFunction* endCompiler() {
   emitReturn();
   ObjFunction* function = current->function;
+  function->chunk.slots = current->usage.peak;
 
 #ifdef DEBUG_PRINT_CODE
   if (!parser.hadError) {
@@ -253,9 +257,9 @@ static void endScope() {
          current->locals[current->localCount - 1].depth >
              current->scopeDepth) {
     if (current->locals[current->localCount - 1].isCaptured) {
-      emitByte(OP_CLOSE_UPVALUE);
+      emitOp(OP_CLOSE_UPVALUE);
     } else {
-      emitByte(OP_POP);
+      emitOp(OP_POP);
     }
     current->localCount--;
   }
@@ -371,7 +375,7 @@ static void defineVariable(uint16_t global) {
     return;
   }
 
-  emitByte(OP_DEFINE_GLOBAL);
+  emitOp(OP_DEFINE_GLOBAL);
   emitShort(global);
 }
 
@@ -391,7 +395,7 @@ static uint8_t argumentList() {
 static void and_(bool canAssign) {
   int endJump = emitJump(OP_JUMP_IF_FALSE);
 
-  emitByte(OP_POP);
+  emitOp(OP_POP);
   parsePrecedence(PREC_AND);
 
   patchJump(endJump);
@@ -399,10 +403,11 @@ static void and_(bool canAssign) {
 
 static void simplify(OpCode first, OpCode second, OpCode combined) {
   if (currentChunk()->code[currentChunk()->count - 1] == first) {
+    current->usage.delta -= getUsage(first).delta;
     amendChunk(currentChunk(), 1);
-    emitByte(combined);
+    emitOp(combined);
   } else {
-    emitByte(second);
+    emitOp(second);
   }
 }
 
@@ -412,14 +417,14 @@ static void binary(bool canAssign) {
   parsePrecedence((Precedence)(rule->precedence + 1));
 
   switch (operatorType) {
-    case TOKEN_BANG_EQUAL: emitByte(OP_NOT_EQUAL); break;
+    case TOKEN_BANG_EQUAL: emitOp(OP_NOT_EQUAL); break;
     case TOKEN_EQUAL_EQUAL:
       simplify(OP_CONSTANT_ZERO, OP_EQUAL, OP_EQUAL_ZERO);
       break;
-    case TOKEN_GREATER: emitByte(OP_GREATER); break;
-    case TOKEN_GREATER_EQUAL: emitByte(OP_GREATER_EQUAL); break;
-    case TOKEN_LESS: emitByte(OP_LESS); break;
-    case TOKEN_LESS_EQUAL: emitByte(OP_LESS_EQUAL); break;
+    case TOKEN_GREATER: emitOp(OP_GREATER); break;
+    case TOKEN_GREATER_EQUAL: emitOp(OP_GREATER_EQUAL); break;
+    case TOKEN_LESS: emitOp(OP_LESS); break;
+    case TOKEN_LESS_EQUAL: emitOp(OP_LESS_EQUAL); break;
     case TOKEN_PLUS: simplify(OP_CONSTANT_ONE, OP_ADD, OP_ADD_ONE); break;
     case TOKEN_MINUS:
       simplify(OP_CONSTANT_ONE, OP_SUBTRACT, OP_SUBTRACT_ONE);
@@ -427,14 +432,16 @@ static void binary(bool canAssign) {
     case TOKEN_STAR:
       simplify(OP_CONSTANT_TWO, OP_MULTIPLY, OP_MULTIPLY_TWO);
       break;
-    case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
+    case TOKEN_SLASH: emitOp(OP_DIVIDE); break;
     default: return;
   }
 }
 
 static void call(bool canAssign) {
   uint8_t argCount = argumentList();
-  emitBytes(OP_CALL, argCount);
+  emitOp(OP_CALL);
+  emitByte(argCount);
+  current->usage.delta -= argCount;
 }
 
 static void dot(bool canAssign) {
@@ -443,24 +450,24 @@ static void dot(bool canAssign) {
 
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    emitByte(OP_SET_PROPERTY);
+    emitOp(OP_SET_PROPERTY);
     emitShort(name);
   } else if (match(TOKEN_LEFT_PAREN)) {
     uint8_t argCount = argumentList();
-    emitByte(OP_INVOKE);
+    emitOp(OP_INVOKE);
     emitShort(name);
     emitByte(argCount);
   } else {
-    emitByte(OP_GET_PROPERTY);
+    emitOp(OP_GET_PROPERTY);
     emitShort(name);
   }
 }
 
 static void literal(bool canAssign) {
   switch (parser.previous.type) {
-    case TOKEN_FALSE: emitByte(OP_FALSE); break;
-    case TOKEN_NIL: emitByte(OP_NIL); break;
-    case TOKEN_TRUE: emitByte(OP_TRUE); break;
+    case TOKEN_FALSE: emitOp(OP_FALSE); break;
+    case TOKEN_NIL: emitOp(OP_NIL); break;
+    case TOKEN_TRUE: emitOp(OP_TRUE); break;
     default: return;
   }
 }
@@ -473,17 +480,17 @@ static void grouping(bool canAssign) {
 static void number(bool canAssign) {
   double value = strtod(parser.previous.start, NULL);
   if (value == 0) {
-    emitByte(OP_CONSTANT_ZERO);
+    emitOp(OP_CONSTANT_ZERO);
   } else if (value == 1) {
-    emitByte(OP_CONSTANT_ONE);
+    emitOp(OP_CONSTANT_ONE);
   } else if (value == 2) {
-    emitByte(OP_CONSTANT_TWO);
+    emitOp(OP_CONSTANT_TWO);
   } else if (value == 3) {
-    emitByte(OP_CONSTANT_THREE);
+    emitOp(OP_CONSTANT_THREE);
   } else if (value == 4) {
-    emitByte(OP_CONSTANT_FOUR);
+    emitOp(OP_CONSTANT_FOUR);
   } else if (value == 5) {
-    emitByte(OP_CONSTANT_FIVE);
+    emitOp(OP_CONSTANT_FIVE);
   } else {
     emitConstant(NUMBER_VAL(value));
   }
@@ -494,7 +501,7 @@ static void or_(bool canAssign) {
   int endJump = emitJump(OP_JUMP);
 
   patchJump(elseJump);
-  emitByte(OP_POP);
+  emitOp(OP_POP);
 
   parsePrecedence(PREC_OR);
   patchJump(endJump);
@@ -518,10 +525,10 @@ static void namedVariable(Token name, bool canAssign) {
     arg = identifierConstant(&name);
     if (canAssign && match(TOKEN_EQUAL)) {
       expression();
-      emitByte(OP_SET_GLOBAL);
+      emitOp(OP_SET_GLOBAL);
       emitShort((uint16_t)arg);
     } else {
-      emitByte(OP_GET_GLOBAL);
+      emitOp(OP_GET_GLOBAL);
       emitShort((uint16_t)arg);
     }
     return;
@@ -529,11 +536,13 @@ static void namedVariable(Token name, bool canAssign) {
 
   if (canAssign && match(TOKEN_EQUAL)) {
     expression();
-    emitBytes(setOp, (uint8_t)arg);
+    emitOp(setOp);
+    emitByte((uint8_t)arg);
   } else if (getOp == OP_GET_LOCAL && arg == 0) {
-    emitByte(OP_GET_THIS);
+    emitOp(OP_GET_THIS);
   } else {
-    emitBytes(getOp, (uint8_t)arg);
+    emitOp(getOp);
+    emitByte((uint8_t)arg);
   }
 }
 
@@ -563,12 +572,12 @@ static void super_(bool canAssign) {
   if (match(TOKEN_LEFT_PAREN)) {
     uint8_t argCount = argumentList();
     namedVariable(syntheticToken("super"), false);
-    emitByte(OP_SUPER_INVOKE);
+    emitOp(OP_SUPER_INVOKE);
     emitShort(name);
     emitByte(argCount);
   } else {
     namedVariable(syntheticToken("super"), false);
-    emitByte(OP_GET_SUPER);
+    emitOp(OP_GET_SUPER);
     emitShort(name);
   }
 }
@@ -587,7 +596,7 @@ static void unary(bool canAssign) {
 
   parsePrecedence(PREC_UNARY);
   switch (operatorType) {
-    case TOKEN_BANG: emitByte(OP_NOT); break;
+    case TOKEN_BANG: emitOp(OP_NOT); break;
     case TOKEN_MINUS:
       simplify(OP_CONSTANT_ONE, OP_NEGATE, OP_CONSTANT_NEGATIVE_ONE);
       break;
@@ -693,7 +702,7 @@ static void function(FunctionType type) {
   block();
 
   ObjFunction* function = endCompiler();
-  emitByte(OP_CLOSURE);
+  emitOp(OP_CLOSURE);
   emitConstantIndex(OBJ_VAL(function));
 
   for (int i = 0; i < function->upvalueCount; i++) {
@@ -713,7 +722,7 @@ static void method() {
   }
 
   function(type);
-  emitByte(OP_METHOD);
+  emitOp(OP_METHOD);
   emitShort(constant);
 }
 
@@ -723,7 +732,7 @@ static void classDeclaration() {
   uint16_t nameConstant = identifierConstant(&parser.previous);
   declareVariable();
 
-  emitByte(OP_CLASS);
+  emitOp(OP_CLASS);
   emitShort(nameConstant);
   defineVariable(nameConstant);
 
@@ -745,7 +754,7 @@ static void classDeclaration() {
     defineVariable(0);
 
     namedVariable(className, false);
-    emitByte(OP_INHERIT);
+    emitOp(OP_INHERIT);
     classCompiler.hasSuperclass = true;
   }
 
@@ -753,7 +762,7 @@ static void classDeclaration() {
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
   while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) { method(); }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
-  emitByte(OP_POP);
+  emitOp(OP_POP);
 
   if (classCompiler.hasSuperclass) { endScope(); }
 
@@ -773,7 +782,7 @@ static void varDeclaration() {
   if (match(TOKEN_EQUAL)) {
     expression();
   } else {
-    emitByte(OP_NIL);
+    emitOp(OP_NIL);
   }
   consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
 
@@ -783,7 +792,7 @@ static void varDeclaration() {
 static void expressionStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
-  emitByte(OP_POP);
+  emitOp(OP_POP);
 }
 
 static void forStatement() {
@@ -802,14 +811,14 @@ static void forStatement() {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
     exitJump = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP);
+    emitOp(OP_POP);
   }
 
   if (!match(TOKEN_RIGHT_PAREN)) {
     int bodyJump = emitJump(OP_JUMP);
     int incrementStart = currentChunk()->count;
     expression();
-    emitByte(OP_POP);
+    emitOp(OP_POP);
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
 
     emitLoop(loopStart);
@@ -822,7 +831,7 @@ static void forStatement() {
 
   if (exitJump != -1) {
     patchJump(exitJump);
-    emitByte(OP_POP);
+    emitOp(OP_POP);
   }
 
   endScope();
@@ -834,13 +843,14 @@ static void ifStatement() {
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
   int thenJump = emitJump(OP_JUMP_IF_FALSE);
-  emitByte(OP_POP);
+  emitOp(OP_POP);
   statement();
 
   int elseJump = emitJump(OP_JUMP);
 
   patchJump(thenJump);
-  emitByte(OP_POP);
+  current->usage.delta++;
+  emitOp(OP_POP);
 
   if (match(TOKEN_ELSE)) statement();
   patchJump(elseJump);
@@ -849,7 +859,7 @@ static void ifStatement() {
 static void printStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after value.");
-  emitByte(OP_PRINT);
+  emitOp(OP_PRINT);
 }
 
 static void returnStatement() {
@@ -866,7 +876,7 @@ static void returnStatement() {
 
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
-    emitByte(OP_RETURN);
+    emitOp(OP_RETURN);
   }
 }
 
@@ -877,12 +887,12 @@ static void whileStatement() {
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
   int exitJump = emitJump(OP_JUMP_IF_FALSE);
-  emitByte(OP_POP);
+  emitOp(OP_POP);
   statement();
   emitLoop(loopStart);
 
   patchJump(exitJump);
-  emitByte(OP_POP);
+  emitOp(OP_POP);
 }
 
 static void synchronize() {

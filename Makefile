@@ -1,7 +1,7 @@
 NAME ?= clox
 
 CFLAGS += -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter
-CFLAGS += -DCONSTANTS_MAX=255
+CFLAGS += -DCONSTANTS_MAX=256 -DFRAMES_MAX=64
 
 DFLAGS = -Og -g3 --coverage -DDEBUG
 RFLAGS = -O3 -flto

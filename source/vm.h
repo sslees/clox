@@ -5,9 +5,6 @@
 #include "table.h"
 #include "value.h"
 
-#define FRAMES_MAX 64
-#define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
-
 typedef struct {
   ObjClosure* closure;
   uint8_t* ip;
@@ -18,8 +15,9 @@ typedef struct {
   CallFrame frames[FRAMES_MAX];
   int frameCount;
 
-  Value stack[STACK_MAX];
+  Value* stack;
   Value* stackTop;
+  int stackCapacity;
   Table globals;
   Table strings;
   ObjString* initString;

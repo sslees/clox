@@ -3,7 +3,8 @@
 
 #include "chunk.h"
 
+char* getOpName(OpCode op);
 void disassembleChunk(Chunk* chunk, const char* name);
-int disassembleInstruction(Chunk* chunk, int offset);
+int disassembleInstr(Chunk* chunk, int offset);
 
 #endif

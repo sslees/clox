@@ -68,6 +68,7 @@ typedef struct {
   int count;
   int capacity;
   uint8_t* code;
+  int slots;
   int lineCount;
   int lineCapacity;
   LineStart* lines;

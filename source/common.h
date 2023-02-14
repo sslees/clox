@@ -6,7 +6,11 @@
 #include <stdint.h>
 
 #ifndef CONSTANTS_MAX
-#define CONSTANTS_MAX UINT16_MAX
+#define CONSTANTS_MAX (UINT16_MAX + 1)
+#endif
+
+#ifndef FRAMES_MAX
+#define FRAMES_MAX 1000
 #endif
 
 #define NAN_BOXING
