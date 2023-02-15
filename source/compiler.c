@@ -197,7 +197,7 @@ static void emitConstant(Value value) {
 static void patchJump(int offset) {
   int jump = currentChunk()->count - offset - 2;
 
-  if (jump > UINT16_MAX) { error("Too much code to jump over."); }
+  if (jump > UINT16_MAX) error("Too much code to jump over.");
 
   currentChunk()->code[offset] = jump & 0xFF;
   currentChunk()->code[offset + 1] = (jump >> 8) & 0xFF;
@@ -299,7 +299,7 @@ static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {
 
   for (int i = 0; i < upvalueCount; i++) {
     Upvalue* upvalue = &compiler->upvalues[i];
-    if (upvalue->index == index && upvalue->isLocal == isLocal) { return i; }
+    if (upvalue->index == index && upvalue->isLocal == isLocal) return i;
   }
 
   if (upvalueCount == UINT8_COUNT) {
@@ -322,7 +322,7 @@ static int resolveUpvalue(Compiler* compiler, Token* name) {
   }
 
   int upvalue = resolveUpvalue(compiler->enclosing, name);
-  if (upvalue != -1) { return addUpvalue(compiler, (uint8_t)upvalue, false); }
+  if (upvalue != -1) return addUpvalue(compiler, (uint8_t)upvalue, false);
 
   return -1;
 }
@@ -345,7 +345,7 @@ static void declareVariable() {
   Token* name = &parser.previous;
   for (int i = current->localCount - 1; i >= 0; i--) {
     Local* local = &current->locals[i];
-    if (local->depth != -1 && local->depth < current->scopeDepth) { break; }
+    if (local->depth != -1 && local->depth < current->scopeDepth) break;
 
     if (identifiersEqual(name, &local->name)) {
       error("Already a variable with this name in this scope.");
@@ -384,7 +384,7 @@ static uint8_t argumentList() {
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
       expression();
-      if (argCount == 255) { error("Can't have more than 255 arguments."); }
+      if (argCount == 255) error("Can't have more than 255 arguments.");
       argCount++;
     } while (match(TOKEN_COMMA));
   }
@@ -664,7 +664,7 @@ static void parsePrecedence(Precedence precedence) {
     infixRule(canAssign);
   }
 
-  if (canAssign && match(TOKEN_EQUAL)) { error("Invalid assignment target."); }
+  if (canAssign && match(TOKEN_EQUAL)) error("Invalid assignment target.");
 }
 
 static ParseRule* getRule(TokenType type) {
@@ -676,7 +676,7 @@ static void expression() {
 }
 
 static void block() {
-  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) { declaration(); }
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) declaration();
 
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
@@ -760,11 +760,11 @@ static void classDeclaration() {
 
   namedVariable(className, false);
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
-  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) { method(); }
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) method();
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
   emitOp(OP_POP);
 
-  if (classCompiler.hasSuperclass) { endScope(); }
+  if (classCompiler.hasSuperclass) endScope();
 
   currentClass = currentClass->enclosing;
 }
@@ -960,7 +960,7 @@ ObjFunction* compile(const char* source) {
 
   advance();
 
-  while (!match(TOKEN_EOF)) { declaration(); }
+  while (!match(TOKEN_EOF)) declaration();
 
   ObjFunction* function = endCompiler();
   return parser.hadError ? NULL : function;

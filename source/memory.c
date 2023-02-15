@@ -20,7 +20,7 @@ void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
     collectGarbage();
 #endif
 
-    if (vm.bytesAllocated > vm.nextGC) { collectGarbage(); }
+    if (vm.bytesAllocated > vm.nextGC) collectGarbage();
   }
 
   if (newSize == 0) {
@@ -61,7 +61,7 @@ void markValue(Value value) {
 }
 
 static void markArray(ValueArray* array) {
-  for (int i = 0; i < array->count; i++) { markValue(array->values[i]); }
+  for (int i = 0; i < array->count; i++) markValue(array->values[i]);
 }
 
 static void blackenObject(Obj* object) {
