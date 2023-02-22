@@ -437,11 +437,14 @@ static void binary(bool canAssign) {
   }
 }
 
-static void call(bool canAssign) {
-  uint8_t argCount = argumentList();
+static void emitCall(uint8_t argCount) {
   emitOp(OP_CALL);
   emitByte(argCount);
   current->usage.delta -= argCount;
+}
+
+static void call(bool canAssign) {
+  emitCall(argumentList());
 }
 
 static void dot(bool canAssign) {
@@ -557,6 +560,26 @@ static Token syntheticToken(const char* text) {
   return token;
 }
 
+static void interpolate(bool canAssign) {
+  bool init = false;
+  do {
+    emitConstant(OBJ_VAL(
+        copyString(parser.previous.start + 1, parser.previous.length - 3)));
+    if (init)
+      emitOp(OP_ADD);
+    else
+      init = true;
+    if (*parser.current.start == '}') errorAtCurrent("Expect expression.");
+    namedVariable(syntheticToken("str"), false);
+    expression();
+    emitCall(1);
+    emitOp(OP_ADD);
+  } while (match(TOKEN_INTERPOLATE));
+  consume(TOKEN_STRING, "Expect end of string interpolation.");
+  string(false);
+  emitOp(OP_ADD);
+}
+
 static void super_(bool canAssign) {
   if (currentClass == NULL) {
     error("Can't use 'super' outside of a class.");
@@ -625,6 +648,7 @@ ParseRule rules[] = {
     [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
+    [TOKEN_INTERPOLATE] = {interpolate, NULL, PREC_NONE},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
     [TOKEN_AND] = {NULL, and_, PREC_AND},

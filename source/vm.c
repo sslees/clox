@@ -4,18 +4,14 @@
 #include "compiler.h"
 #include "debug.h"
 #include "memory.h"
+#include "native.h"
 #include "object.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 VM vm;
-
-static Value clockNative(int argCount, Value* args) {
-  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
-}
 
 static void resetStack() {
   vm.stackTop = vm.stack;
@@ -92,6 +88,7 @@ void initVM() {
   vm.initString = copyString("init", 4);
 
   defineNative("clock", clockNative);
+  defineNative("str", strNative);
 }
 
 void freeVM() {

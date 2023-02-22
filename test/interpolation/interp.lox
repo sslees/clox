@@ -1,0 +1,9 @@
+var drink = "Tea";
+var steep = 4;
+var cool = 2;
+print "${drink} will be ready in ${steep + cool} minutes."; // expect: Tea will be ready in 6 minutes.
+print "Nested ${"interpolation?! Are you ${"mad?!"}"}"; // expect: Nested interpolation?! Are you mad?!
+
+print "${1}${2}${3}"; // expect: 123
+print "${"a"}${"b"}${"c"}"; // expect: abc
+print "${"${"${"${"${"${"${"${"${"${"ten"}"}"}"}"}"}"}"}"}"}"; // expect: ten

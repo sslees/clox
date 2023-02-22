@@ -1,7 +1,7 @@
 NAME ?= clox
 
 CFLAGS += -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter
-CFLAGS += -DCONSTANTS_MAX=256 -DFRAMES_MAX=64
+CFLAGS += -D_GNU_SOURCE -DCONSTANTS_MAX=256 -DFRAMES_MAX=64
 
 DFLAGS = -Og -g3 --coverage -DDEBUG
 RFLAGS = -O3 -flto
@@ -42,9 +42,12 @@ build/debug/%.o: source/%.c Makefile
 
 -include $(addprefix build/debug/,$(DEPS))
 
-all: format test cov leak heap bench
+all: format test-release cov leak heap bench
 
-test: build/release/$(NAME)
+test: build/debug/$(NAME)
+	@$(call TEST,$<)
+
+test-release: build/release/$(NAME)
 	@$(call TEST,$<)
 
 cov: build/debug/$(NAME)
@@ -77,4 +80,4 @@ run: $(NAME)
 clean:
 	$(RM) -r build $(NAME)
 
-.PHONY: release debug all test cov leak heap bench format run clean
+.PHONY: release debug all test test-release cov leak heap bench format run clean

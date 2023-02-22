@@ -8,6 +8,7 @@
 typedef struct {
   const char* start;
   const char* current;
+  int interps;
   int line;
 } Scanner;
 
@@ -16,6 +17,7 @@ Scanner scanner;
 void initScanner(const char* source) {
   scanner.start = source;
   scanner.current = source;
+  scanner.interps = 0;
   scanner.line = 1;
 }
 
@@ -58,6 +60,9 @@ static Token makeToken(TokenType type) {
   token.start = scanner.start;
   token.length = (int)(scanner.current - scanner.start);
   token.line = scanner.line;
+#ifdef DEBUG_PRINT_TOKENS
+  printf("%-20s %.*s\n", getTokenName(token.type), token.length, token.start);
+#endif
   return token;
 }
 
@@ -155,7 +160,14 @@ static Token number() {
 
 static Token string() {
   while (peek() != '"' && !isAtEnd()) {
-    if (peek() == '\n') scanner.line++;
+    if (peek() == '\n')
+      scanner.line++;
+    else if (peek() == '$' && peekNext() == '{') {
+      advance();
+      advance();
+      scanner.interps++;
+      return makeToken(TOKEN_INTERPOLATE);
+    }
     advance();
   }
 
@@ -179,7 +191,13 @@ Token scanToken() {
     case '(': return makeToken(TOKEN_LEFT_PAREN);
     case ')': return makeToken(TOKEN_RIGHT_PAREN);
     case '{': return makeToken(TOKEN_LEFT_BRACE);
-    case '}': return makeToken(TOKEN_RIGHT_BRACE);
+    case '}': {
+      if (scanner.interps) {
+        scanner.interps--;
+        return string();
+      }
+      return makeToken(TOKEN_RIGHT_BRACE);
+    }
     case ';': return makeToken(TOKEN_SEMICOLON);
     case ',': return makeToken(TOKEN_COMMA);
     case '.': return makeToken(TOKEN_DOT);

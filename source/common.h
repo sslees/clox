@@ -15,6 +15,7 @@
 
 #define NAN_BOXING
 
+// #define DEBUG_PRINT_TOKENS
 // #define DEBUG_PRINT_CODE
 // #define DEBUG_TRACE_EXECUTION
 

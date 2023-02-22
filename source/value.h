@@ -87,6 +87,7 @@ bool valuesEqual(Value a, Value b);
 void initValueArray(ValueArray* array);
 void writeValueArray(ValueArray* array, Value value);
 void freeValueArray(ValueArray* array);
+char* valToStr(Value value);
 void printValue(Value value);
 
 #endif

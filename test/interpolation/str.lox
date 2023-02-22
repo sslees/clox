@@ -1,0 +1,26 @@
+var instance;
+
+fun function() {
+    return instance;
+}
+
+class Class {
+    method() {
+        return function;
+    }
+}
+
+instance = Class();
+
+print str(true); // expect: true
+print str(false); // expect: false
+print str(nil); // expect: nil
+print str(123); // expect: 123
+print str(123.456); // expect: 123.456
+print str(instance.method); // expect: <fn method>
+print str(Class); // expect: Class
+print str(instance.method()); // expect: <fn function>
+print str(function); // expect: <fn function>
+print str(instance); // expect: Class instance
+print str(str); // expect: <native fn>
+print str("abc"); // expect: abc

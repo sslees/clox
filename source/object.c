@@ -125,27 +125,24 @@ ObjUpvalue* newUpvalue(Value* slot) {
   return upvalue;
 }
 
-static void printFunction(ObjFunction* function) {
-  if (function->name == NULL) {
-    printf("<script>");
-    return;
-  }
-  printf("<fn %s>", function->name->chars);
+static int fnToStr(char** buff, ObjFunction* function) {
+  if (function->name == NULL) return asprintf(buff, "<script>");
+  return asprintf(buff, "<fn %s>", function->name->chars);
 }
 
-void printObject(Value value) {
+int objToStr(char** buff, Value value) {
   switch (OBJ_TYPE(value)) {
     case OBJ_BOUND_METHOD:
-      printFunction(AS_BOUND_METHOD(value)->method->function);
-      break;
-    case OBJ_CLASS: printf("%s", AS_CLASS(value)->name->chars); break;
-    case OBJ_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
-    case OBJ_FUNCTION: printFunction(AS_FUNCTION(value)); break;
+      return fnToStr(buff, AS_BOUND_METHOD(value)->method->function);
+    case OBJ_CLASS: return asprintf(buff, "%s", AS_CLASS(value)->name->chars);
+    case OBJ_CLOSURE: return fnToStr(buff, AS_CLOSURE(value)->function);
+    case OBJ_FUNCTION: return fnToStr(buff, AS_FUNCTION(value));
     case OBJ_INSTANCE:
-      printf("%s instance", AS_INSTANCE(value)->klass->name->chars);
-      break;
-    case OBJ_NATIVE: printf("<native fn>"); break;
-    case OBJ_STRING: printf("%s", AS_CSTRING(value)); break;
-    case OBJ_UPVALUE: printf("upvalue"); break;
+      return asprintf(
+          buff, "%s instance", AS_INSTANCE(value)->klass->name->chars);
+    case OBJ_NATIVE: return asprintf(buff, "<native fn>");
+    case OBJ_STRING: return asprintf(buff, "%s", AS_CSTRING(value));
+    case OBJ_UPVALUE: return asprintf(buff, "upvalue");
   }
+  return -1;
 }
