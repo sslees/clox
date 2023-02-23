@@ -1,0 +1,1 @@
+true ? 1; // Error at ';': Expect ':' after then branch of conditional operator.

@@ -3,7 +3,7 @@ NAME ?= clox
 CFLAGS += -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter
 CFLAGS += -D_GNU_SOURCE -DCONSTANTS_MAX=256 -DFRAMES_MAX=64
 
-DFLAGS = -Og -g3 --coverage -DDEBUG
+DFLAGS = -Og -g3 --coverage -DDEBUG -DDEBUG_STRESS_GC
 RFLAGS = -O3 -flto
 SCRIPT = examples/fib25.lox
 
@@ -12,7 +12,8 @@ SRCS := $(wildcard source/*.c)
 OBJS := $(notdir $(SRCS:.c=.o))
 DEPS := $(OBJS:.o=.d)
 
-TEST = cd $(HOME)/downloads/craftinginterpreters; \
+TEST = echo "Testing $(1):"; \
+	cd $(HOME)/downloads/craftinginterpreters; \
 	dart tool/bin/test.dart clox --interpreter $(CURDIR)/$(1)
 BENCH = find bench -type f -exec echo -n {} " " \; -exec $(1) {} \;
 
@@ -42,9 +43,9 @@ build/debug/%.o: source/%.c Makefile
 
 -include $(addprefix build/debug/,$(DEPS))
 
-all: format test-release cov leak heap bench
+all: format test-debug test-release cov leak heap bench
 
-test: build/debug/$(NAME)
+test test-debug: build/debug/$(NAME)
 	@$(call TEST,$<)
 
 test-release: build/release/$(NAME)
@@ -80,4 +81,4 @@ run: $(NAME)
 clean:
 	$(RM) -r build $(NAME)
 
-.PHONY: release debug all test test-release cov leak heap bench format run clean
+.PHONY: release debug all test test-debug test-release cov leak heap bench format run clean

@@ -11,6 +11,8 @@ char* getTokenName(TokenType token) {
     case TOKEN_RIGHT_PAREN: return "TOKEN_RIGHT_PAREN";
     case TOKEN_LEFT_BRACE: return "TOKEN_LEFT_BRACE";
     case TOKEN_RIGHT_BRACE: return "TOKEN_RIGHT_BRACE";
+    case TOKEN_QUESTION: return "TOKEN_QUESTION";
+    case TOKEN_COLON: return "TOKEN_COLON";
     case TOKEN_COMMA: return "TOKEN_COMMA";
     case TOKEN_DOT: return "TOKEN_DOT";
     case TOKEN_MINUS: return "TOKEN_MINUS";

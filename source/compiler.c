@@ -23,6 +23,7 @@ typedef struct {
 typedef enum {
   PREC_NONE,
   PREC_ASSIGNMENT,
+  PREC_CONDITIONAL,
   PREC_OR,
   PREC_AND,
   PREC_EQUALITY,
@@ -185,13 +186,10 @@ static uint16_t makeConstant(Value value) {
   return (uint16_t)index;
 }
 
-static void emitConstantIndex(Value value) {
-  emitShort(makeConstant(value));
-}
-
 static void emitConstant(Value value) {
+  uint16_t index = makeConstant(value);
   emitOp(OP_CONSTANT);
-  emitConstantIndex(value);
+  emitShort(index);
 }
 
 static void patchJump(int offset) {
@@ -475,6 +473,21 @@ static void literal(bool canAssign) {
   }
 }
 
+static void conditional(bool canAssign) {
+  int thenJump = emitJump(OP_JUMP_IF_FALSE);
+
+  parsePrecedence(PREC_CONDITIONAL);
+
+  int elseJump = emitJump(OP_JUMP);
+
+  patchJump(thenJump);
+  current->usage.delta--;
+  consume(
+      TOKEN_COLON, "Expect ':' after then branch of conditional operator.");
+  parsePrecedence(PREC_ASSIGNMENT);
+  patchJump(elseJump);
+}
+
 static void grouping(bool canAssign) {
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
@@ -632,6 +645,8 @@ ParseRule rules[] = {
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_QUESTION] = {NULL, conditional, PREC_CONDITIONAL},
+    [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
     [TOKEN_DOT] = {NULL, dot, PREC_CALL},
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
@@ -726,8 +741,9 @@ static void function(FunctionType type) {
   block();
 
   ObjFunction* function = endCompiler();
+  uint16_t index = makeConstant(OBJ_VAL(function));
   emitOp(OP_CLOSURE);
-  emitConstantIndex(OBJ_VAL(function));
+  emitShort(index);
 
   for (int i = 0; i < function->upvalueCount; i++) {
     emitByte(compiler.upvalues[i].isLocal ? true : false);

@@ -2,9 +2,9 @@
 
 #include "memory.h"
 #include "object.h"
+#include "vm.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 void initValueArray(ValueArray* array) {
@@ -55,6 +55,7 @@ char* valToStr(Value value) {
   }
 #endif
   if (bytes == -1) return NULL;
+  vm.bytesAllocated += bytes;
   return buff;
 }
 
@@ -63,7 +64,7 @@ void printValue(Value value) {
 
   if (str != NULL) {
     printf("%s", str);
-    free(str);
+    FREE_ARRAY(char, str, strlen(str) + 1);
   }
 }
 
