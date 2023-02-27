@@ -144,8 +144,7 @@ static void freeObject(Obj* object) {
     case OBJ_NATIVE: FREE(ObjNative, object); break;
     case OBJ_STRING: {
       ObjString* string = (ObjString*)object;
-      FREE_ARRAY(char, string->chars, string->length + 1);
-      FREE(ObjString, object);
+      reallocate(string, sizeof(ObjString) + string->length + 1, 0);
       break;
     }
     case OBJ_UPVALUE: FREE(ObjUpvalue, object); break;

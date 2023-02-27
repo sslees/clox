@@ -73,20 +73,15 @@ ObjNative* newNative(NativeFn function) {
   return native;
 }
 
-static ObjString* allocateString(char* chars, int length, uint32_t hash) {
-  ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
+ObjString* allocateString(int length) {
+  ObjString* string =
+      (ObjString*)allocateObject(sizeof(ObjString) + length + 1, OBJ_STRING);
   string->length = length;
-  string->chars = chars;
-  string->hash = hash;
-
-  push(OBJ_VAL(string));
-  tableSet(&vm.strings, string, NIL_VAL);
-  pop();
 
   return string;
 }
 
-static uint32_t hashString(const char* key, int length) {
+uint32_t hashString(const char* key, int length) {
   uint32_t hash = 2166136261u;
   for (int i = 0; i < length; i++) {
     hash ^= (uint8_t)key[i];
@@ -96,14 +91,11 @@ static uint32_t hashString(const char* key, int length) {
 }
 
 ObjString* takeString(char* chars, int length) {
-  uint32_t hash = hashString(chars, length);
-  ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
-  if (interned != NULL) {
-    FREE_ARRAY(char, chars, length + 1);
-    return interned;
-  }
+  ObjString* string = copyString(chars, length);
 
-  return allocateString(chars, length, hash);
+  FREE_ARRAY(char, chars, length + 1);
+
+  return string;
 }
 
 ObjString* copyString(const char* chars, int length) {
@@ -111,10 +103,17 @@ ObjString* copyString(const char* chars, int length) {
   ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
   if (interned != NULL) return interned;
 
-  char* heapChars = ALLOCATE(char, length + 1);
-  memcpy(heapChars, chars, length);
-  heapChars[length] = '\0';
-  return allocateString(heapChars, length, hash);
+  ObjString* string = allocateString(length);
+
+  memcpy(string->chars, chars, length);
+  string->chars[length] = '\0';
+  string->hash = hash;
+
+  push(OBJ_VAL(string));
+  tableSet(&vm.strings, string, NIL_VAL);
+  pop();
+
+  return string;
 }
 
 ObjUpvalue* newUpvalue(Value* slot) {

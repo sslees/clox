@@ -12,8 +12,7 @@ SRCS := $(wildcard source/*.c)
 OBJS := $(notdir $(SRCS:.c=.o))
 DEPS := $(OBJS:.o=.d)
 
-TEST = echo "Testing $(1):"; \
-	cd $(HOME)/downloads/craftinginterpreters; \
+TEST = cd $(HOME)/downloads/craftinginterpreters; \
 	dart tool/bin/test.dart clox --interpreter $(CURDIR)/$(1)
 BENCH = find bench -type f -exec echo -n {} " " \; -exec $(1) {} \;
 
@@ -46,9 +45,11 @@ build/debug/%.o: source/%.c Makefile
 all: format test-debug test-release cov leak heap bench
 
 test test-debug: build/debug/$(NAME)
+	@echo "Testing $<:"
 	@$(call TEST,$<)
 
 test-release: build/release/$(NAME)
+	@echo "Testing $<:"
 	@$(call TEST,$<)
 
 cov: build/debug/$(NAME)
