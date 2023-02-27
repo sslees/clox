@@ -9,6 +9,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 VM vm;
@@ -554,8 +555,10 @@ static InterpretResult run() {
 #undef BINARY_OP
 }
 
-InterpretResult interpret(const char* source) {
+InterpretResult interpret(char* source, bool file) {
   ObjFunction* function = compile(source);
+
+  if (file) free(source);
   if (function == NULL) return INTERPRET_COMPILE_ERROR;
 
   push(OBJ_VAL(function));
