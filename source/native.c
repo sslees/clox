@@ -12,7 +12,7 @@ Value clockNative(int argc, Value* argv) {
 Value strNative(int argc, Value* argv) {
   Value value = *argv;
 
-  if (IS_OBJ(value) && OBJ_TYPE(value) == OBJ_STRING) return value;
+  if (IS_STRING(value)) return value;
 
   char* str = valToStr(value);
 

@@ -394,17 +394,29 @@ static InterpretResult run() {
       }
       case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
       case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
-      case OP_ADD:
-        if (IS_STRING(peek0()) && IS_STRING(peek1())) {
+      case OP_ADD: {
+        Value b = peek0();
+        Value a = peek1();
+
+        if (IS_NUMBER(a) && IS_NUMBER(b)) {
+          pop();
+          put(NUMBER_VAL(AS_NUMBER(a) + AS_NUMBER(b)));
+        } else if (IS_STRING(a) && IS_STRING(b)) {
           concatenate();
-        } else if (IS_NUMBER(peek0()) && IS_NUMBER(peek1())) {
-          double b = AS_NUMBER(pop());
-          put(NUMBER_VAL(AS_NUMBER(peek0()) + b));
+        } else if (IS_STRING(a)) {
+          put(strNative(1, &b));
+          concatenate();
+        } else if (IS_STRING(b)) {
+          pop();
+          put(strNative(1, &a));
+          push(b);
+          concatenate();
         } else {
           runtimeError("Operands must be two numbers or two strings.");
           return INTERPRET_RUNTIME_ERROR;
         }
         break;
+      }
       case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
       case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
       case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
@@ -511,13 +523,19 @@ static InterpretResult run() {
       case OP_CONSTANT_THREE: push(NUMBER_VAL(3)); break;
       case OP_CONSTANT_FOUR: push(NUMBER_VAL(4)); break;
       case OP_CONSTANT_FIVE: push(NUMBER_VAL(5)); break;
-      case OP_ADD_ONE:
-        if (!IS_NUMBER(peek0())) {
+      case OP_ADD_ONE: {
+        Value value = peek0();
+        if (IS_NUMBER(value)) {
+          put(NUMBER_VAL(AS_NUMBER(value) + 1));
+        } else if (IS_STRING(value)) {
+          push(OBJ_VAL(copyString("1", 1)));
+          concatenate();
+        } else {
           runtimeError("Operands must be two numbers or two strings.");
           return INTERPRET_RUNTIME_ERROR;
         }
-        put(NUMBER_VAL(AS_NUMBER(peek0()) + 1));
         break;
+      }
       case OP_SUBTRACT_ONE:
         if (!IS_NUMBER(peek0())) {
           runtimeError("Operands must be numbers.");

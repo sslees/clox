@@ -110,7 +110,7 @@ ObjUpvalue* newUpvalue(Value* slot);
 int objToStr(char** buff, Value value);
 
 static inline bool isObjType(Value value, ObjType type) {
-  return IS_OBJ(value) && AS_OBJ(value)->type == type;
+  return IS_OBJ(value) && OBJ_TYPE(value) == type;
 }
 
 #endif

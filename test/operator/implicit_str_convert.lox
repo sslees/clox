@@ -1,0 +1,12 @@
+print "abc" + true; // expect: abctrue
+print "abc" + false; // expect: abcfalse
+print "abc" + nil; // expect: abcnil
+print "abc" + 123; // expect: abc123
+print "abc" + 123.456; // expect: abc123.456
+print "abc" + str; // expect: abc<native fn>
+print true + "abc"; // expect: trueabc
+print false + "abc"; // expect: falseabc
+print nil + "abc"; // expect: nilabc
+print 123 + "abc"; // expect: 123abc
+print 123.456 + "abc"; // expect: 123.456abc
+print str + "abc"; // expect: <native fn>abc
