@@ -20,19 +20,19 @@ void freeTable(Table* table) {
   initTable(table);
 }
 
-static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
-  uint32_t index = key->hash & (capacity - 1);
+static Entry* findEntry(Entry* entries, int capacity, Value key) {
+  uint32_t index = hashValue(key) & (capacity - 1);
   Entry* tombstone = NULL;
 
   while (true) {
     Entry* entry = &entries[index];
-    if (entry->key == NULL) {
+    if (IS_EMPTY(entry->key)) {
       if (IS_NIL(entry->value)) {
         return tombstone != NULL ? tombstone : entry;
       } else {
         if (tombstone == NULL) tombstone = entry;
       }
-    } else if (entry->key == key) {
+    } else if (valuesEqual(entry->key, OBJ_VAL(key))) {
       return entry;
     }
 
@@ -40,11 +40,11 @@ static Entry* findEntry(Entry* entries, int capacity, ObjString* key) {
   }
 }
 
-bool tableGet(Table* table, ObjString* key, Value* value) {
+bool tableGet(Table* table, Value key, Value* value) {
   if (table->count == 0) return false;
 
   Entry* entry = findEntry(table->entries, table->capacity, key);
-  if (entry->key == NULL) return false;
+  if (IS_EMPTY(entry->key)) return false; // IS_NIL?
 
   *value = entry->value;
   return true;
@@ -53,14 +53,14 @@ bool tableGet(Table* table, ObjString* key, Value* value) {
 static void adjustCapacity(Table* table, int capacity) {
   Entry* entries = ALLOCATE(Entry, capacity);
   for (int i = 0; i < capacity; i++) {
-    entries[i].key = NULL;
+    entries[i].key = EMPTY_VAL;
     entries[i].value = NIL_VAL;
   }
 
   table->count = 0;
   for (int i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
-    if (entry->key == NULL) continue;
+    if (IS_EMPTY(entry->key)) continue;
 
     Entry* dest = findEntry(entries, capacity, entry->key);
     dest->key = entry->key;
@@ -73,28 +73,28 @@ static void adjustCapacity(Table* table, int capacity) {
   table->capacity = capacity;
 }
 
-bool tableSet(Table* table, ObjString* key, Value value) {
+bool tableSet(Table* table, Value key, Value value) {
   if (table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
     int capacity = GROW_CAPACITY(table->capacity);
     adjustCapacity(table, capacity);
   }
 
   Entry* entry = findEntry(table->entries, table->capacity, key);
-  bool isNewKey = entry->key == NULL;
+  bool isNewKey = IS_EMPTY(entry->key);
   if (isNewKey && IS_NIL(entry->value)) table->count++;
 
-  entry->key = key;
+  entry->key = OBJ_VAL(key);
   entry->value = value;
   return isNewKey;
 }
 
-bool tableDelete(Table* table, ObjString* key) {
+bool tableDelete(Table* table, Value key) {
   if (table->count == 0) return false;
 
   Entry* entry = findEntry(table->entries, table->capacity, key);
-  if (entry->key == NULL) return false;
+  if (IS_EMPTY(entry->key)) return false;
 
-  entry->key = NULL;
+  entry->key = EMPTY_VAL;
   entry->value = BOOL_VAL(true);
   return true;
 }
@@ -102,7 +102,7 @@ bool tableDelete(Table* table, ObjString* key) {
 void tableAddAll(Table* from, Table* to) {
   for (int i = 0; i < from->capacity; i++) {
     Entry* entry = &from->entries[i];
-    if (entry->key != NULL) tableSet(to, entry->key, entry->value);
+    if (!IS_EMPTY(entry->key)) tableSet(to, entry->key, entry->value);
   }
 }
 
@@ -113,12 +113,15 @@ tableFindString(Table* table, const char* chars, int length, uint32_t hash) {
   uint32_t index = hash & (table->capacity - 1);
   while (true) {
     Entry* entry = &table->entries[index];
-    if (entry->key == NULL) {
+    if (IS_EMPTY(entry->key)) {
       if (IS_NIL(entry->value)) return NULL;
-    } else if (
-        entry->key->length == length && entry->key->hash == hash &&
-        memcmp(entry->key->chars, chars, length) == 0) {
-      return entry->key;
+    } else {
+      ObjString* string = AS_STRING(entry->key);
+
+      if (string->length == length && string->hash == hash &&
+          memcmp(string->chars, chars, length) == 0) {
+        return string;
+      }
     }
 
     index = (index + 1) & (table->capacity - 1);
@@ -128,7 +131,7 @@ tableFindString(Table* table, const char* chars, int length, uint32_t hash) {
 void tableRemoveWhite(Table* table) {
   for (int i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
-    if (entry->key != NULL && !entry->key->obj.isMarked) {
+    if (IS_OBJ(entry->key) && !AS_OBJ(entry->key)->isMarked) {
       tableDelete(table, entry->key);
     }
   }
@@ -137,7 +140,7 @@ void tableRemoveWhite(Table* table) {
 void markTable(Table* table) {
   for (int i = 0; i < table->capacity; i++) {
     Entry* entry = &table->entries[i];
-    markObject((Obj*)entry->key);
+    markValue(entry->key);
     markValue(entry->value);
   }
 }
