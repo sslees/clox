@@ -66,6 +66,7 @@ typedef struct Compiler {
   ObjFunction* function;
   FunctionType type;
 
+  Table stringConstants;
   Local locals[UINT8_COUNT];
   int localCount;
   Upvalue upvalues[UINT8_COUNT];
@@ -205,6 +206,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
   compiler->enclosing = current;
   compiler->function = NULL;
   compiler->type = type;
+  initTable(&compiler->stringConstants);
   compiler->localCount = 0;
   compiler->scopeDepth = 0;
   compiler->usage = (SlotUsage){0, 0};
@@ -231,6 +233,7 @@ static ObjFunction* endCompiler() {
   emitReturn();
   ObjFunction* function = current->function;
   function->chunk.slots = current->usage.peak;
+  freeTable(&current->stringConstants);
 
 #ifdef DEBUG_PRINT_CODE
   if (!parser.hadError) {
@@ -270,7 +273,16 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 
 static uint16_t identifierConstant(Token* name) {
-  return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+  ObjString* string = copyString(name->start, name->length);
+  Value indexValue;
+
+  if (tableGet(&current->stringConstants, OBJ_VAL(string), &indexValue))
+    return (uint16_t)AS_NUMBER(indexValue);
+
+  uint16_t index = makeConstant(OBJ_VAL(string));
+  tableSet(
+      &current->stringConstants, OBJ_VAL(string), NUMBER_VAL((double)index));
+  return index;
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
