@@ -60,6 +60,7 @@ static void runFile(const char* path) {
 
 int main(int argc, const char* argv[]) {
   initVM();
+  atexit(freeVM);
 
   if (argc == 1) {
     repl();
@@ -70,6 +71,5 @@ int main(int argc, const char* argv[]) {
     exit(64);
   }
 
-  freeVM();
   return 0;
 }

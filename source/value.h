@@ -17,6 +17,7 @@ typedef struct ObjString ObjString;
 #define TAG_NIL 1
 #define TAG_FALSE 2
 #define TAG_TRUE 3
+#define TAG_UNDEFINED 4
 
 typedef uint64_t Value;
 
@@ -25,6 +26,7 @@ typedef uint64_t Value;
 #define IS_NUMBER(value) (((value)&QNAN) != QNAN)
 #define IS_OBJ(value) (((value) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
 #define IS_EMPTY(value) ((value) == EMPTY_VAL)
+#define IS_UNDEFINED(value) ((value) == UNDEFINED_VAL)
 
 #define AS_BOOL(value) ((value) == TRUE_VAL)
 #define AS_NUMBER(value) valueToNum(value)
@@ -37,6 +39,7 @@ typedef uint64_t Value;
 #define NUMBER_VAL(num) numToValue(num)
 #define OBJ_VAL(obj) (Value)(SIGN_BIT | QNAN | (uint64_t)(uintptr_t)(obj))
 #define EMPTY_VAL ((Value)(uint64_t)(QNAN | TAG_EMPTY))
+#define UNDEFINED_VAL ((Value)(uint64_t)(QNAN | TAG_UNDEFINED))
 
 static inline double valueToNum(Value value) {
   double num;
@@ -52,7 +55,14 @@ static inline Value numToValue(double num) {
 
 #else
 
-typedef enum { VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_OBJ, VAL_EMPTY } ValueType;
+typedef enum {
+  VAL_BOOL,
+  VAL_NIL,
+  VAL_NUMBER,
+  VAL_OBJ,
+  VAL_EMPTY,
+  VAL_UNDEFINED
+} ValueType;
 
 typedef struct {
   ValueType type;
@@ -69,6 +79,7 @@ typedef struct {
 #define IS_NUMBER(value) ((value).type == VAL_NUMBER)
 #define IS_OBJ(value) ((value).type == VAL_OBJ)
 #define IS_EMPTY(value) ((value).type == VAL_EMPTY)
+#define IS_UNDEFINED(value) ((value).type == VAL_UNDEFINED)
 
 #define AS_OBJ(value) ((value).as.obj)
 #define AS_BOOL(value) ((value).as.boolean)
@@ -79,6 +90,7 @@ typedef struct {
 #define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
 #define OBJ_VAL(object) ((Value){VAL_OBJ, {.obj = (Obj*)object}})
 #define EMPTY_VAL ((Value){VAL_EMPTY, {.number = 0}})
+#define UNDEFINED_VAL ((Value){VAL_UNDEFINED, {.number = 0}})
 
 #endif
 

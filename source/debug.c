@@ -2,6 +2,7 @@
 
 #include "object.h"
 #include "value.h"
+#include "vm.h"
 
 #include <stdio.h>
 
@@ -128,6 +129,14 @@ static int constantInstr(OpCode op, Chunk* chunk, int offset) {
   return offset + 3;
 }
 
+static int globalInstr(OpCode op, Chunk* chunk, int offset) {
+  uint16_t global = chunk->code[offset + 1] | chunk->code[offset + 2] << 8;
+  printf("%-16s %5d '", getOpName(op), global);
+  printValue(vm.globalValues.values[global]);
+  printf("'\n");
+  return offset + 3;
+}
+
 static int invokeInstr(OpCode op, Chunk* chunk, int offset) {
   uint16_t constant = chunk->code[offset + 1] | chunk->code[offset + 2] << 8;
   uint8_t argCount = chunk->code[offset + 3];
@@ -173,9 +182,9 @@ int disassembleInstr(Chunk* chunk, int offset) {
     case OP_POP: return simpleInstr(opcode, offset);
     case OP_GET_LOCAL: return byteInstr(opcode, chunk, offset);
     case OP_SET_LOCAL: return byteInstr(opcode, chunk, offset);
-    case OP_GET_GLOBAL: return constantInstr(opcode, chunk, offset);
-    case OP_DEFINE_GLOBAL: return constantInstr(opcode, chunk, offset);
-    case OP_SET_GLOBAL: return constantInstr(opcode, chunk, offset);
+    case OP_GET_GLOBAL: return globalInstr(opcode, chunk, offset);
+    case OP_DEFINE_GLOBAL: return globalInstr(opcode, chunk, offset);
+    case OP_SET_GLOBAL: return globalInstr(opcode, chunk, offset);
     case OP_GET_UPVALUE: return byteInstr(opcode, chunk, offset);
     case OP_SET_UPVALUE: return byteInstr(opcode, chunk, offset);
     case OP_GET_PROPERTY: return constantInstr(opcode, chunk, offset);

@@ -42,10 +42,21 @@ static void runtimeError(const char* format, ...) {
   resetStack();
 }
 
+char* getGlobalName(uint16_t index) {
+  for (int i = 0; i < vm.globalNames.capacity; i++) {
+    Entry* entry = &vm.globalNames.entries[i];
+    if ((uint16_t)AS_NUMBER(entry->value) == index)
+      return AS_STRING(entry->key)->chars;
+  }
+  return NULL;
+}
+
 static void defineNative(const char* name, NativeFn function) {
   push(OBJ_VAL(copyString(name, (int)strlen(name))));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&vm.globals, vm.stack[0], vm.stack[1]);
+  uint16_t index = (uint16_t)vm.globalValues.count;
+  writeValueArray(&vm.globalValues, vm.stack[1]);
+  tableSet(&vm.globalNames, vm.stack[0], NUMBER_VAL((double)index));
   pop();
   pop();
 }
@@ -82,7 +93,8 @@ void initVM() {
   vm.grayCapacity = 0;
   vm.grayStack = NULL;
 
-  initTable(&vm.globals);
+  initTable(&vm.globalNames);
+  initValueArray(&vm.globalValues);
   initTable(&vm.strings);
 
   vm.initString = NULL;
@@ -94,7 +106,8 @@ void initVM() {
 
 void freeVM() {
   FREE_ARRAY(Value*, vm.stack, vm.stackCapacity);
-  freeTable(&vm.globals);
+  freeTable(&vm.globalNames);
+  freeValueArray(&vm.globalValues);
   freeTable(&vm.strings);
   vm.initString = NULL;
   freeObjects();
@@ -326,26 +339,25 @@ static InterpretResult run() {
       case OP_GET_LOCAL: push(frame->slots[READ_BYTE()]); break;
       case OP_SET_LOCAL: frame->slots[READ_BYTE()] = peek0(); break;
       case OP_GET_GLOBAL: {
-        ObjString* name = READ_STRING();
-        Value value;
-        if (!tableGet(&vm.globals, OBJ_VAL(name), &value)) {
-          runtimeError("Undefined variable '%s'.", name->chars);
+        uint16_t index = READ_SHORT();
+        Value value = vm.globalValues.values[index];
+        if (IS_UNDEFINED(value)) {
+          runtimeError("Undefined variable '%s'.", getGlobalName(index));
           return INTERPRET_RUNTIME_ERROR;
         }
         push(value);
         break;
       }
       case OP_DEFINE_GLOBAL:
-        tableSet(&vm.globals, READ_CONSTANT(), peek0());
-        pop();
+        vm.globalValues.values[READ_SHORT()] = pop();
         break;
       case OP_SET_GLOBAL: {
-        ObjString* name = READ_STRING();
-        if (tableSet(&vm.globals, OBJ_VAL(name), peek0())) {
-          tableDelete(&vm.globals, OBJ_VAL(name));
-          runtimeError("Undefined variable '%s'.", name->chars);
+        uint16_t index = READ_SHORT();
+        if (IS_UNDEFINED(vm.globalValues.values[index])) {
+          runtimeError("Undefined variable '%s'.", getGlobalName(index));
           return INTERPRET_RUNTIME_ERROR;
         }
+        vm.globalValues.values[index] = peek(0);
         break;
       }
       case OP_GET_UPVALUE:
