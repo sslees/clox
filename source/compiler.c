@@ -285,6 +285,18 @@ static uint16_t identifierConstant(Token* name) {
   return index;
 }
 
+static uint16_t globalIdentifier(Value identifier) {
+  Value index;
+
+  if (tableGet(&vm.globalNames, identifier, &index))
+    return (uint16_t)AS_NUMBER(index);
+
+  uint16_t newIndex = (uint16_t)vm.globalValues.count;
+  writeValueArray(&vm.globalValues, UNDEFINED_VAL);
+  tableSet(&vm.globalNames, identifier, NUMBER_VAL((double)newIndex));
+  return newIndex;
+}
+
 static bool identifiersEqual(Token* a, Token* b) {
   if (a->length != b->length) return false;
   return memcmp(a->start, b->start, a->length) == 0;
@@ -386,7 +398,7 @@ static void defineVariable(uint16_t global) {
   }
 
   emitOp(OP_DEFINE_GLOBAL);
-  emitShort(global);
+  emitShort(globalIdentifier(currentChunk()->constants.values[global]));
 }
 
 static uint8_t argumentList() {
@@ -550,7 +562,7 @@ static void namedVariable(Token name, bool canAssign) {
     getOp = OP_GET_UPVALUE;
     setOp = OP_SET_UPVALUE;
   } else {
-    arg = identifierConstant(&name);
+    arg = globalIdentifier(OBJ_VAL(copyString(name.start, name.length)));
     if (canAssign && match(TOKEN_EQUAL)) {
       expression();
       emitOp(OP_SET_GLOBAL);
@@ -744,8 +756,8 @@ static void function(FunctionType type) {
       if (current->function->arity > 255) {
         errorAtCurrent("Can't have more than 255 parameters.");
       }
-      uint16_t constant = parseVariable("Expect parameter name.");
-      defineVariable(constant);
+      parseVariable("Expect parameter name.");
+      defineVariable(0);
     } while (match(TOKEN_COMMA));
   }
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");

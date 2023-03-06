@@ -18,7 +18,8 @@ typedef struct {
   Value* stack;
   Value* stackTop;
   int stackCapacity;
-  Table globals;
+  Table globalNames;
+  ValueArray globalValues;
   Table strings;
   ObjString* initString;
   ObjUpvalue* openUpvalues;
