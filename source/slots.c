@@ -54,6 +54,7 @@ SlotUsage getUsage(OpCode op) {
     case OP_GREATER_EQUAL: return (SlotUsage){-1, 0};
     case OP_LESS_EQUAL: return (SlotUsage){-1, 0};
     case OP_GET_THIS: return (SlotUsage){1, 1};
+    case OP_DUP: return (SlotUsage){1, 1};
   }
   return (SlotUsage){0, 0};
 }

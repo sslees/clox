@@ -5,11 +5,12 @@
 
 #include <time.h>
 
-Value clockNative(int argc, Value* argv) {
+Value clockNative(
+    int argc __attribute__((unused)), Value* argv __attribute__((unused))) {
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
-Value strNative(int argc, Value* argv) {
+Value strNative(int argc __attribute__((unused)), Value* argv) {
   Value value = *argv;
 
   if (IS_STRING(value)) return value;

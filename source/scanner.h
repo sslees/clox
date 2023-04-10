@@ -43,6 +43,9 @@ typedef enum {
   TOKEN_TRUE,
   TOKEN_VAR,
   TOKEN_WHILE,
+  TOKEN_CASE,
+  TOKEN_DEFAULT,
+  TOKEN_SWITCH,
   TOKEN_ERROR,
   TOKEN_EOF
 } TokenType;

@@ -114,6 +114,12 @@ void freeVM() {
 }
 
 void push(Value value) {
+#ifdef DEBUG_CHECK_STACK
+  if (vm.stackTop - vm.stack == vm.stackCapacity) {
+    runtimeError("Stack overflow.");
+    exit(70);
+  }
+#endif
   *vm.stackTop++ = value;
 }
 
@@ -575,6 +581,7 @@ static InterpretResult run() {
       case OP_GREATER_EQUAL: BINARY_OP(BOOL_VAL, >=); break;
       case OP_LESS_EQUAL: BINARY_OP(BOOL_VAL, <=); break;
       case OP_GET_THIS: push(*frame->slots); break;
+      case OP_DUP: push(peek0()); break;
     }
   }
 

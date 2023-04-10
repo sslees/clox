@@ -1,0 +1,3 @@
+switch (nil) {
+  default: var error; // Error at 'var': Expect expression.
+}

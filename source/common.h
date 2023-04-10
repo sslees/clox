@@ -17,7 +17,9 @@
 
 // #define DEBUG_PRINT_TOKENS
 // #define DEBUG_PRINT_CODE
+
 // #define DEBUG_TRACE_EXECUTION
+// #define DEBUG_CHECK_STACK
 
 // #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC

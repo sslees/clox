@@ -49,6 +49,9 @@ char* getTokenName(TokenType token) {
     case TOKEN_TRUE: return "TOKEN_TRUE";
     case TOKEN_VAR: return "TOKEN_VAR";
     case TOKEN_WHILE: return "TOKEN_WHILE";
+    case TOKEN_CASE: return "TOKEN_CASE";
+    case TOKEN_DEFAULT: return "TOKEN_DEFAULT";
+    case TOKEN_SWITCH: return "TOKEN_SWITCH";
     case TOKEN_ERROR: return "TOKEN_ERROR";
     case TOKEN_EOF: return "TOKEN_EOF";
   }
@@ -109,6 +112,7 @@ char* getOpName(OpCode op) {
     case OP_GREATER_EQUAL: return "OP_GREATER_EQUAL";
     case OP_LESS_EQUAL: return "OP_LESS_EQUAL";
     case OP_GET_THIS: return "OP_GET_THIS";
+    case OP_DUP: return "OP_DUP";
   }
   return NULL;
 }
@@ -244,6 +248,7 @@ int disassembleInstr(Chunk* chunk, int offset) {
     case OP_GREATER_EQUAL: return simpleInstr(opcode, offset);
     case OP_LESS_EQUAL: return simpleInstr(opcode, offset);
     case OP_GET_THIS: return simpleInstr(opcode, offset);
+    case OP_DUP: return simpleInstr(opcode, offset);
   }
   printf("Unknown opcode %d\n", opcode);
   return offset + 1;

@@ -18,9 +18,9 @@ void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
   if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
     collectGarbage();
-#endif
-
+#else
     if (vm.bytesAllocated > vm.nextGC) collectGarbage();
+#endif
   }
 
   if (newSize == 0) {

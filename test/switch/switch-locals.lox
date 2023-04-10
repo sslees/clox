@@ -1,0 +1,90 @@
+for (var i = 0; i < 8; i = i + 1) {
+  switch (1) {
+    case 1: {
+      var a = 11;
+      var b = 12;
+      var c = 13;
+      print b + i;
+    }
+    default: nil;
+  }
+}
+// expect: 12
+// expect: 13
+// expect: 14
+// expect: 15
+// expect: 16
+// expect: 17
+// expect: 18
+// expect: 19
+
+for (var i = 0; i < 8; i = i + 1) {
+  switch (1) {
+    case 2: nil;
+    default: {
+      var a = 21;
+      var b = 22;
+      var c = 23;
+      print b + i;
+    }
+  }
+}
+// expect: 22
+// expect: 23
+// expect: 24
+// expect: 25
+// expect: 26
+// expect: 27
+// expect: 28
+// expect: 29
+
+for (var i = 0; i < 8; i = i + 1) {
+  switch (1) {
+    case 1: {
+      var a = 31;
+      var b = 32;
+      var c = 33;
+      print b + i;
+    }
+  }
+}
+// expect: 32
+// expect: 33
+// expect: 34
+// expect: 35
+// expect: 36
+// expect: 37
+// expect: 38
+// expect: 39
+
+for (var i = 0; i < 8; i = i + 1) {
+  switch (1) {
+    default: {
+      var a = 41;
+      var b = 42;
+      var c = 43;
+      print b + i;
+    }
+  }
+}
+// expect: 42
+// expect: 43
+// expect: 44
+// expect: 45
+// expect: 46
+// expect: 47
+// expect: 48
+// expect: 49
+
+for (var i = 0; i < 8; i = i + 1) {
+  switch (1) {}
+  print i;
+}
+// expect: 0
+// expect: 1
+// expect: 2
+// expect: 3
+// expect: 4
+// expect: 5
+// expect: 6
+// expect: 7

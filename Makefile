@@ -1,9 +1,9 @@
 NAME ?= clox
 
-CFLAGS += -std=c99 -Wall -Wextra -Werror -Wno-unused-parameter
+CFLAGS += -std=c99 -Wall -Wextra -Werror
 CFLAGS += -D_GNU_SOURCE -DCONSTANTS_MAX=256 -DFRAMES_MAX=64
 
-DFLAGS = -Og -g3 --coverage -DDEBUG -DDEBUG_STRESS_GC
+DFLAGS = -Og -g3 --coverage -DDEBUG -DDEBUG_CHECK_STACK -DDEBUG_STRESS_GC
 RFLAGS = -O3 -flto
 SCRIPT = examples/fib25.lox
 
@@ -14,6 +14,7 @@ DEPS := $(OBJS:.o=.d)
 
 TEST = cd $(HOME)/downloads/craftinginterpreters; \
 	dart tool/bin/test.dart clox --interpreter $(CURDIR)/$(1)
+TESTS = $(HOME)/downloads/craftinginterpreters/test
 BENCH = find bench -type f -exec echo -n {} " " \; -exec $(1) {} \;
 
 debug: build/debug/$(NAME)
@@ -64,6 +65,12 @@ leak: build/debug/$(NAME)
 	@valgrind -q --leak-check=full --errors-for-leak-kinds=all --error-exitcode=1 \
 		./$< $(SCRIPT) > /dev/null && echo "Memcheck:  no leaks, no errors"
 
+leak-full: build/debug/$(NAME)
+	@for script in $$(find -L $(TESTS) -path "$(TESTS)/benchmark" -prune -o -type f -name "*.lox" -print); do \
+		valgrind --leak-check=full --errors-for-leak-kinds=all ./$< $$script 2>&1 | \
+		grep -q "ERROR SUMMARY: 0 errors" && echo leak check: pass $$script || echo leak check: FAIL $$script ; \
+	done
+
 heap: build/release/$(NAME)
 	@valgrind --tool=dhat --dhat-out-file=/dev/null \
 		./$< $(SCRIPT) 2>&1 >/dev/null | \
@@ -82,4 +89,4 @@ run: $(NAME)
 clean:
 	$(RM) -r build $(NAME)
 
-.PHONY: release debug all test test-debug test-release cov leak heap bench format run clean
+.PHONY: release debug all test test-debug test-release cov leak leak-full heap bench format run clean

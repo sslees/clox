@@ -1,0 +1,59 @@
+var LOOPS = 10000;
+
+for (var i = 0; i < LOOPS / 2; i = i + 1) {
+    for (var j = 0; j < 2; j = j + 1) i;
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    if (i < LOOPS / 2) i;
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    if (i < LOOPS / 2) i;
+    else i;
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    switch (i) {}
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    switch (i) {
+        case i: i;
+    }
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    switch (i) {
+        default: i;
+    }
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    switch (i) {
+        case i: i;
+        default: i;
+    }
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    switch (i) {
+        case -1: i;
+        default: i;
+    }
+}
+
+for (var i = 0; i < LOOPS / 2; i = i + 1) {
+    var j = 0;
+    while (j < 2) j = j + 1;
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    {
+        i;
+    }
+}
+
+for (var i = 0; i < LOOPS; i = i + 1) {
+    i;
+}

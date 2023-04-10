@@ -414,7 +414,7 @@ static uint8_t argumentList() {
   return argCount;
 }
 
-static void and_(bool canAssign) {
+static void and_(bool canAssign __attribute__((unused))) {
   int endJump = emitJump(OP_JUMP_IF_FALSE);
 
   emitOp(OP_POP);
@@ -433,7 +433,7 @@ static void simplify(OpCode first, OpCode second, OpCode combined) {
   }
 }
 
-static void binary(bool canAssign) {
+static void binary(bool canAssign __attribute__((unused))) {
   TokenType operatorType = parser.previous.type;
   ParseRule* rule = getRule(operatorType);
   parsePrecedence((Precedence)(rule->precedence + 1));
@@ -465,7 +465,7 @@ static void emitCall(uint8_t argCount) {
   current->usage.delta -= argCount;
 }
 
-static void call(bool canAssign) {
+static void call(bool canAssign __attribute__((unused))) {
   emitCall(argumentList());
 }
 
@@ -488,7 +488,7 @@ static void dot(bool canAssign) {
   }
 }
 
-static void literal(bool canAssign) {
+static void literal(bool canAssign __attribute__((unused))) {
   switch (parser.previous.type) {
     case TOKEN_FALSE: emitOp(OP_FALSE); break;
     case TOKEN_NIL: emitOp(OP_NIL); break;
@@ -497,7 +497,7 @@ static void literal(bool canAssign) {
   }
 }
 
-static void conditional(bool canAssign) {
+static void conditional(bool canAssign __attribute__((unused))) {
   int thenJump = emitJump(OP_JUMP_IF_FALSE);
 
   parsePrecedence(PREC_CONDITIONAL);
@@ -512,12 +512,12 @@ static void conditional(bool canAssign) {
   patchJump(elseJump);
 }
 
-static void grouping(bool canAssign) {
+static void grouping(bool canAssign __attribute__((unused))) {
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-static void number(bool canAssign) {
+static void number(bool canAssign __attribute__((unused))) {
   double value = strtod(parser.previous.start, NULL);
   if (value == 0) {
     emitOp(OP_CONSTANT_ZERO);
@@ -536,7 +536,7 @@ static void number(bool canAssign) {
   }
 }
 
-static void or_(bool canAssign) {
+static void or_(bool canAssign __attribute__((unused))) {
   int elseJump = emitJump(OP_JUMP_IF_FALSE);
   int endJump = emitJump(OP_JUMP);
 
@@ -547,7 +547,7 @@ static void or_(bool canAssign) {
   patchJump(endJump);
 }
 
-static void string(bool canAssign) {
+static void string(bool canAssign __attribute__((unused))) {
   emitConstant(OBJ_VAL(
       copyString(parser.previous.start + 1, parser.previous.length - 2)));
 }
@@ -586,7 +586,7 @@ static void namedVariable(Token name, bool canAssign) {
   }
 }
 
-static void variable(bool canAssign) {
+static void variable(bool canAssign __attribute__((unused))) {
   namedVariable(parser.previous, canAssign);
 }
 
@@ -597,7 +597,7 @@ static Token syntheticToken(const char* text) {
   return token;
 }
 
-static void interpolate(bool canAssign) {
+static void interpolate(bool canAssign __attribute__((unused))) {
   bool init = false;
   do {
     emitConstant(OBJ_VAL(
@@ -617,7 +617,7 @@ static void interpolate(bool canAssign) {
   emitOp(OP_ADD);
 }
 
-static void super_(bool canAssign) {
+static void super_(bool canAssign __attribute__((unused))) {
   if (currentClass == NULL) {
     error("Can't use 'super' outside of a class.");
   } else if (!currentClass->hasSuperclass) {
@@ -642,7 +642,7 @@ static void super_(bool canAssign) {
   }
 }
 
-static void this_(bool canAssign) {
+static void this_(bool canAssign __attribute__((unused))) {
   if (currentClass == NULL) {
     error("Can't use 'this' outside of a class.");
     return;
@@ -651,7 +651,7 @@ static void this_(bool canAssign) {
   variable(false);
 }
 
-static void unary(bool canAssign) {
+static void unary(bool canAssign __attribute__((unused))) {
   TokenType operatorType = parser.previous.type;
 
   parsePrecedence(PREC_UNARY);
@@ -920,6 +920,66 @@ static void ifStatement() {
   patchJump(elseJump);
 }
 
+static void switchStatement() {
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after value.");
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before switch cases.");
+
+  int state = 0;
+  int caseCount = 0;
+  int caseCapacity = 0;
+  int previousCaseSkip = -1;
+  int* caseEnds = NULL;
+
+  while (!match(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    if (match(TOKEN_CASE) || match(TOKEN_DEFAULT)) {
+      TokenType caseType = parser.previous.type;
+
+      if (state == 2)
+        error("Can't have another case or default after the default case.");
+      if (state == 1) {
+        caseEnds[caseCount++] = emitJump(OP_JUMP);
+        patchJump(previousCaseSkip);
+        current->usage.delta++;
+        emitOp(OP_POP);
+      }
+      if (caseType == TOKEN_CASE) {
+        if (caseCount == caseCapacity) {
+          int oldCapacity = caseCapacity;
+
+          caseCapacity = GROW_CAPACITY(oldCapacity);
+          caseEnds = GROW_ARRAY(int, caseEnds, oldCapacity, caseCapacity);
+        }
+        state = 1;
+        emitOp(OP_DUP);
+        expression();
+        consume(TOKEN_COLON, "Expect ':' after case value.");
+        emitOp(OP_EQUAL);
+        previousCaseSkip = emitJump(OP_JUMP_IF_FALSE);
+        current->usage.delta += 2;
+        emitOp(OP_POP);
+        emitOp(OP_POP);
+      } else {
+        state = 2;
+        consume(TOKEN_COLON, "Expect ':' after default.");
+        previousCaseSkip = -1;
+        emitOp(OP_POP);
+      }
+    } else {
+      if (state == 0) errorAtCurrent("Can't have statements before any case.");
+      statement();
+    }
+  }
+  if (state == 1) {
+    caseEnds[caseCount++] = emitJump(OP_JUMP);
+    patchJump(previousCaseSkip);
+  }
+  if (state < 2) emitOp(OP_POP);
+  for (int i = 0; i < caseCount; i++) patchJump(caseEnds[i]);
+  FREE_ARRAY(int*, caseEnds, caseCapacity);
+}
+
 static void printStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after value.");
@@ -1001,6 +1061,8 @@ static void statement() {
     forStatement();
   } else if (match(TOKEN_IF)) {
     ifStatement();
+  } else if (match(TOKEN_SWITCH)) {
+    switchStatement();
   } else if (match(TOKEN_RETURN)) {
     returnStatement();
   } else if (match(TOKEN_WHILE)) {

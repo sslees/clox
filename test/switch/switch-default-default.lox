@@ -1,0 +1,4 @@
+switch (nil) {
+  default: nil;
+  default: nil; // Error at 'default': Can't have another case or default after the default case.
+}
