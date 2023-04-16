@@ -46,6 +46,7 @@ typedef enum {
   TOKEN_CASE,
   TOKEN_DEFAULT,
   TOKEN_SWITCH,
+  TOKEN_CONTINUE,
   TOKEN_ERROR,
   TOKEN_EOF
 } TokenType;

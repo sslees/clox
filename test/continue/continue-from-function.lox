@@ -1,0 +1,5 @@
+while (true) {
+    fun f() {
+        continue; // Error at 'continue': Can't use 'continue' outside of a loop.
+    }
+}

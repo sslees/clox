@@ -52,6 +52,7 @@ char* getTokenName(TokenType token) {
     case TOKEN_CASE: return "TOKEN_CASE";
     case TOKEN_DEFAULT: return "TOKEN_DEFAULT";
     case TOKEN_SWITCH: return "TOKEN_SWITCH";
+    case TOKEN_CONTINUE: return "TOKEN_CONTINUE";
     case TOKEN_ERROR: return "TOKEN_ERROR";
     case TOKEN_EOF: return "TOKEN_EOF";
   }

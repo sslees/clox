@@ -1,0 +1,67 @@
+for (var i = 0; i < 4; i = i + 1) {
+    print i;
+    continue;
+    print "skip";
+}
+// expect: 0
+// expect: 1
+// expect: 2
+// expect: 3
+
+{
+    var i = 0;
+    while (i < 4) {
+        print i;
+        i = i + 1;
+        continue;
+        print "skip";
+    }
+}
+// expect: 0
+// expect: 1
+// expect: 2
+// expect: 3
+
+for (var i = 10; i < 40; i = i + 10) {
+    var j = 0;
+    while (j < 3) {
+        print i + j;
+        j = j + 1;
+        continue;
+        print "inner skip";
+    }
+    continue;
+    print "outer skip";
+}
+// expect: 10
+// expect: 11
+// expect: 12
+// expect: 20
+// expect: 21
+// expect: 22
+// expect: 30
+// expect: 31
+// expect: 32
+
+{
+    var i = 0;
+    while (i < 3) {
+        for (var j = 10; j < 40; j = j + 10) {
+            print i + j;
+            continue;
+            print "inner skip";
+        }
+        i = i + 1;
+        continue;
+        print "outer skip";
+    }
+}
+// expect: 10
+// expect: 20
+// expect: 30
+// expect: 11
+// expect: 21
+// expect: 31
+// expect: 12
+// expect: 22
+// expect: 32

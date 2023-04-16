@@ -66,9 +66,10 @@ leak: build/debug/$(NAME)
 		./$< $(SCRIPT) > /dev/null && echo "Memcheck:  no leaks, no errors"
 
 leak-full: build/debug/$(NAME)
+	@echo Checking for leaks with: valgrind --leak-check=full --errors-for-leak-kinds=all ./$< \[script\]
 	@for script in $$(find -L $(TESTS) -path "$(TESTS)/benchmark" -prune -o -type f -name "*.lox" -print); do \
 		valgrind --leak-check=full --errors-for-leak-kinds=all ./$< $$script 2>&1 | \
-		grep -q "ERROR SUMMARY: 0 errors" && echo leak check: pass $$script || echo leak check: FAIL $$script ; \
+		grep -q "ERROR SUMMARY: 0 errors" || echo leak check FAIL: $$script ; \
 	done
 
 heap: build/release/$(NAME)
