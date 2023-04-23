@@ -301,19 +301,17 @@ static void concatenate() {
 
 static InterpretResult run() {
   CallFrame* frame = &vm.frames[vm.frameCount - 1];
+  register uint8_t* ip = frame->ip;
 
-#define READ_BYTE() (*frame->ip++)
-
-#define READ_SHORT() \
-  (frame->ip += 2, (uint16_t)(frame->ip[-2] | frame->ip[-1] << 8))
-
+#define READ_BYTE() (*ip++)
+#define READ_SHORT() (ip += 2, (uint16_t)(ip[-2] | ip[-1] << 8))
 #define READ_CONSTANT() \
   (frame->closure->function->chunk.constants.values[READ_SHORT()])
-
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
   do { \
     if (!IS_NUMBER(peek0()) || !IS_NUMBER(peek1())) { \
+      frame->ip = ip; \
       runtimeError("Operands must be numbers."); \
       return INTERPRET_RUNTIME_ERROR; \
     } \
@@ -332,7 +330,7 @@ static InterpretResult run() {
     printf("\n");
     disassembleInstr(
         &frame->closure->function->chunk,
-        (int)(frame->ip - frame->closure->function->chunk.code));
+        (int)(ip - frame->closure->function->chunk.code));
 #endif
 
     OpCode instruction = READ_BYTE();
@@ -348,6 +346,7 @@ static InterpretResult run() {
         uint16_t index = READ_SHORT();
         Value value = vm.globalValues.values[index];
         if (IS_UNDEFINED(value)) {
+          frame->ip = ip;
           runtimeError("Undefined variable '%s'.", getGlobalName(index));
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -360,6 +359,7 @@ static InterpretResult run() {
       case OP_SET_GLOBAL: {
         uint16_t index = READ_SHORT();
         if (IS_UNDEFINED(vm.globalValues.values[index])) {
+          frame->ip = ip;
           runtimeError("Undefined variable '%s'.", getGlobalName(index));
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -375,6 +375,7 @@ static InterpretResult run() {
       }
       case OP_GET_PROPERTY: {
         if (!IS_INSTANCE(peek0())) {
+          frame->ip = ip;
           runtimeError("Only instances have properties.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -387,13 +388,13 @@ static InterpretResult run() {
           put(value);
           break;
         }
-        if (!bindMethod(instance->klass, name)) {
-          return INTERPRET_RUNTIME_ERROR;
-        }
+        frame->ip = ip;
+        if (!bindMethod(instance->klass, name)) return INTERPRET_RUNTIME_ERROR;
         break;
       }
       case OP_SET_PROPERTY:
         if (!IS_INSTANCE(peek1())) {
+          frame->ip = ip;
           runtimeError("Only instances have fields.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -402,6 +403,7 @@ static InterpretResult run() {
         put(pop());
         break;
       case OP_GET_SUPER:
+        frame->ip = ip;
         if (!bindMethod(AS_CLASS(pop()), READ_STRING()))
           return INTERPRET_RUNTIME_ERROR;
         break;
@@ -430,6 +432,7 @@ static InterpretResult run() {
           push(b);
           concatenate();
         } else {
+          frame->ip = ip;
           runtimeError("Operands must be two numbers or two strings.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -441,6 +444,7 @@ static InterpretResult run() {
       case OP_NOT: put(BOOL_VAL(isFalsey(peek0()))); break;
       case OP_NEGATE:
         if (!IS_NUMBER(peek0())) {
+          frame->ip = ip;
           runtimeError("Operand must be a number.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -452,41 +456,46 @@ static InterpretResult run() {
         break;
       case OP_JUMP: {
         uint16_t offset = READ_SHORT();
-        frame->ip += offset;
+        ip += offset;
         break;
       }
       case OP_JUMP_IF_FALSE: {
         uint16_t offset = READ_SHORT();
-        if (isFalsey(peek0())) frame->ip += offset;
+        if (isFalsey(peek0())) ip += offset;
         break;
       }
       case OP_LOOP: {
         uint16_t offset = READ_SHORT();
-        frame->ip -= offset;
+        ip -= offset;
         break;
       }
       case OP_CALL: {
         int argCount = READ_BYTE();
-        if (!callValue(peek(argCount), argCount)) {
+        frame->ip = ip;
+        if (!callValue(peek(argCount), argCount))
           return INTERPRET_RUNTIME_ERROR;
-        }
         frame = &vm.frames[vm.frameCount - 1];
+        ip = frame->ip;
         break;
       }
       case OP_INVOKE: {
         ObjString* method = READ_STRING();
         int argCount = READ_BYTE();
+        frame->ip = ip;
         if (!invoke(method, argCount)) return INTERPRET_RUNTIME_ERROR;
         frame = &vm.frames[vm.frameCount - 1];
+        ip = frame->ip;
         break;
       }
       case OP_SUPER_INVOKE: {
         ObjString* method = READ_STRING();
         int argCount = READ_BYTE();
         ObjClass* superclass = AS_CLASS(pop());
+        frame->ip = ip;
         if (!invokeFromClass(superclass, method, argCount))
           return INTERPRET_RUNTIME_ERROR;
         frame = &vm.frames[vm.frameCount - 1];
+        ip = frame->ip;
         break;
       }
       case OP_CLOSURE: {
@@ -518,12 +527,14 @@ static InterpretResult run() {
         vm.stackTop = frame->slots;
         push(result);
         frame = &vm.frames[vm.frameCount - 1];
+        ip = frame->ip;
         break;
       }
       case OP_CLASS: push(OBJ_VAL(newClass(READ_STRING()))); break;
       case OP_INHERIT: {
         Value superclass = peek1();
         if (!IS_CLASS(superclass)) {
+          frame->ip = ip;
           runtimeError("Superclass must be a class.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -549,6 +560,7 @@ static InterpretResult run() {
           push(OBJ_VAL(copyString("1", 1)));
           concatenate();
         } else {
+          frame->ip = ip;
           runtimeError("Operands must be two numbers or two strings.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -556,6 +568,7 @@ static InterpretResult run() {
       }
       case OP_SUBTRACT_ONE:
         if (!IS_NUMBER(peek0())) {
+          frame->ip = ip;
           runtimeError("Operands must be numbers.");
           return INTERPRET_RUNTIME_ERROR;
         }
@@ -563,6 +576,7 @@ static InterpretResult run() {
         break;
       case OP_MULTIPLY_TWO:
         if (!IS_NUMBER(peek0())) {
+          frame->ip = ip;
           runtimeError("Operands must be numbers.");
           return INTERPRET_RUNTIME_ERROR;
         }
