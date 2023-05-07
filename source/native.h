@@ -3,7 +3,7 @@
 
 #include "value.h"
 
-Value clockNative(int argc, Value* argv);
-Value strNative(int argc, Value* argv);
+bool clockNative(int argc, Value* argv);
+bool strNative(int argc, Value* argv);
 
 #endif

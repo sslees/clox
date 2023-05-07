@@ -187,10 +187,10 @@ static bool callValue(Value callee, int argCount) {
       case OBJ_CLOSURE: return call(AS_CLOSURE(callee), argCount);
       case OBJ_NATIVE: {
         NativeFn native = AS_NATIVE(callee);
-        Value result = native(argCount, vm.stackTop - argCount);
+        bool success = native(argCount, vm.stackTop - argCount);
         vm.stackTop -= argCount;
-        put(result);
-        return true;
+        if (!success) runtimeError(AS_CSTRING(peek0()));
+        return success;
       }
       default: break;
     }
@@ -424,12 +424,14 @@ static InterpretResult run() {
         } else if (IS_STRING(a) && IS_STRING(b)) {
           concatenate();
         } else if (IS_STRING(a)) {
-          put(strNative(1, &b));
+          push(b);
+          strNative(1, vm.stackTop - 1);
+          pop();
           concatenate();
         } else if (IS_STRING(b)) {
-          pop();
-          put(strNative(1, &a));
-          push(b);
+          put(a);
+          strNative(1, vm.stackTop - 1);
+          put(b);
           concatenate();
         } else {
           frame->ip = ip;
