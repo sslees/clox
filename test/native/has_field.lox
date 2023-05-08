@@ -1,0 +1,13 @@
+class Class {
+    init() {
+        this.field1 = nil;
+    }
+}
+
+var instance = Class();
+
+instance.field2 = nil;
+
+print hasField(instance, "field1"); // expect: true
+print hasField(instance, "field2"); // expect: true
+print hasField(instance, "field3"); // expect: false

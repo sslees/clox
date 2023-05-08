@@ -102,6 +102,7 @@ void initVM() {
 
   defineNative("clock", clockNative);
   defineNative("str", strNative);
+  defineNative("hasField", hasFieldNative);
 }
 
 void freeVM() {

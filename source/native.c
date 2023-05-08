@@ -48,3 +48,15 @@ bool strNative(int argc, Value* argv) {
   if (str == NULL) NATIVE_ERROR("Could not convert value to string.");
   NATIVE_RETURN(OBJ_VAL(takeString(str, strlen(str))));
 }
+
+bool hasFieldNative(int argc, Value* argv) {
+  ASSERT_ARITY(2);
+  if (!IS_INSTANCE(argv[0]))
+    NATIVE_ERROR("Argument 1 of hasField must be an instance.");
+  if (!IS_STRING(argv[1]))
+    NATIVE_ERROR("Argument 2 of hasField must be a string.");
+
+  ObjInstance* instance = AS_INSTANCE(argv[0]);
+  Value unused;
+  NATIVE_RETURN(BOOL_VAL(tableGet(&instance->fields, argv[1], &unused)));
+}
