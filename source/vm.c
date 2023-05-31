@@ -103,6 +103,8 @@ void initVM() {
   defineNative("clock", clockNative);
   defineNative("str", strNative);
   defineNative("hasField", hasFieldNative);
+  defineNative("getField", getFieldNative);
+  defineNative("setField", setFieldNative);
 }
 
 void freeVM() {
@@ -293,7 +295,10 @@ static void concatenate() {
   result->hash = hashString(result->chars, length);
 
   push(OBJ_VAL(result));
-  tableSet(&vm.strings, OBJ_VAL(result), NIL_VAL);
+  tableSet(
+      &vm.strings, OBJ_VAL(result),
+      NIL_VAL); // TODO: any other places where tableSet is called with an
+                // object that could be GC'd?
   pop();
 
   pop();

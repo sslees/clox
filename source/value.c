@@ -74,7 +74,14 @@ void printValue(Value value) {
 bool valuesEqual(Value a, Value b) {
 #ifdef NAN_BOXING
   if (IS_NUMBER(a) && IS_NUMBER(b)) return AS_NUMBER(a) == AS_NUMBER(b);
-  return a == b;
+  if (a == b) return true;
+  if (IS_STRING(a) && IS_STRING(b)) {
+    ObjString* strA = AS_STRING(a);
+    ObjString* strB = AS_STRING(b);
+    return strA->length == strB->length && strA->hash == strB->hash &&
+           memcmp(strA->chars, strB->chars, strA->length) == 0;
+  }
+  return false;
 #else
   if (a.type != b.type) return false;
   switch (a.type) {

@@ -1,0 +1,15 @@
+class Class {
+    init() {
+        setField(this, "field1", 1);
+    }
+}
+
+var instance = Class();
+var field3 = "field3";
+
+setField(instance, "field" + "2", 2);
+setField(instance, field3, 3);
+
+print instance.field1; // expect: 1
+print instance.field2; // expect: 2
+print instance.field3; // expect: 3

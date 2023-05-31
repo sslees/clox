@@ -35,6 +35,15 @@ static Value arityError(int expected, int actual) {
   return errorVal;
 }
 
+static Value getFieldError(const char* instance, const char* name) {
+  char* buff;
+  if (asprintf(&buff, "%s does not have field \"%s\".", instance, name) == -1)
+    exit(1);
+  Value errorVal = OBJ_VAL(copyString(buff, strlen(buff)));
+  free(buff);
+  return errorVal;
+}
+
 bool clockNative(int argc, Value* argv) {
   ASSERT_ARITY(0);
   NATIVE_RETURN(NUMBER_VAL((double)clock() / CLOCKS_PER_SEC));
@@ -45,7 +54,7 @@ bool strNative(int argc, Value* argv) {
   Value value = *argv;
   if (IS_STRING(value)) NATIVE_RETURN(value);
   char* str = valToStr(value);
-  if (str == NULL) NATIVE_ERROR("Could not convert value to string.");
+  if (str == NULL) NATIVE_ERROR("Could not convert argument 1 to a string.");
   NATIVE_RETURN(OBJ_VAL(takeString(str, strlen(str))));
 }
 
@@ -56,7 +65,42 @@ bool hasFieldNative(int argc, Value* argv) {
   if (!IS_STRING(argv[1]))
     NATIVE_ERROR("Argument 2 of hasField must be a string.");
 
-  ObjInstance* instance = AS_INSTANCE(argv[0]);
-  Value unused;
-  NATIVE_RETURN(BOOL_VAL(tableGet(&instance->fields, argv[1], &unused)));
+  NATIVE_RETURN(
+      BOOL_VAL(tableGet(&AS_INSTANCE(argv[0])->fields, argv[1], NULL)));
+}
+
+bool getFieldNative(int argc, Value* argv) {
+  ASSERT_ARITY(2);
+  if (!IS_INSTANCE(argv[0]))
+    NATIVE_ERROR("Argument 1 of getField must be an instance.");
+  if (!IS_STRING(argv[1]))
+    NATIVE_ERROR("Argument 2 of getField must be a string.");
+
+  Value value;
+
+  if (!tableGet(&AS_INSTANCE(argv[0])->fields, argv[1], &value)) {
+    char* strInstance = valToStr(argv[0]);
+    char* strName = valToStr(argv[1]);
+
+    if (strInstance == NULL)
+      NATIVE_ERROR("Could not convert argument 1 to a string.");
+    if (strName == NULL)
+      NATIVE_ERROR("Could not convert argument 2 to a string.");
+
+    argv[-1] = getFieldError(strInstance, strName);
+    return false;
+  }
+
+  NATIVE_RETURN(value);
+}
+
+bool setFieldNative(int argc, Value* argv) {
+  ASSERT_ARITY(3);
+  if (!IS_INSTANCE(argv[0]))
+    NATIVE_ERROR("Argument 1 of setField must be an instance.");
+  if (!IS_STRING(argv[1]))
+    NATIVE_ERROR("Argument 2 of setField must be a string.");
+
+  NATIVE_RETURN(
+      BOOL_VAL(tableSet(&AS_INSTANCE(argv[0])->fields, argv[1], argv[2])));
 }

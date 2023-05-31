@@ -299,7 +299,9 @@ static uint16_t globalIdentifier(Value identifier) {
 
   uint16_t newIndex = (uint16_t)vm.globalValues.count;
   writeValueArray(&vm.globalValues, UNDEFINED_VAL);
+  push(identifier);
   tableSet(&vm.globalNames, identifier, NUMBER_VAL((double)newIndex));
+  pop();
   return newIndex;
 }
 
