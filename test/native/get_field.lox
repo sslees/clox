@@ -5,11 +5,9 @@ class Class {
 }
 
 var instance = Class();
-var field3 = "field3";
 
 instance.field2 = 2;
-instance.field3 = 3;
 
 print getField(instance, "field1"); // expect: 1
-print getField(instance, "field" + "2"); // expect: 2
-print getField(instance, field3); // expect: 3
+print getField(instance, "field2"); // expect: 2
+print getField(instance, "field3"); // expect runtime error: Class instance does not have field "field3".

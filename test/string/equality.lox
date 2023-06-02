@@ -1,1 +1,6 @@
-print "abc" + "def" == "abcdef"; // expect: true
+var abc = "abc";
+
+print "abc" == "abc"; // expect: true
+print "abc" == abc; // expect: true
+print "abc" == str(abc); // expect: true
+print "abc" == "ab" + "c"; // expect: true

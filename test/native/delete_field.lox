@@ -1,0 +1,18 @@
+class Class {
+    init() {
+        this.field1 = 1;
+    }
+}
+
+var instance = Class();
+
+instance.field2 = 2;
+
+print deleteField(instance, "field1"); // expect: true
+print deleteField(instance, "field2"); // expect: true
+print deleteField(instance, "field2"); // expect: false
+print deleteField(instance, "field3"); // expect: false
+
+print hasField(instance, "field1"); // expect: false
+print hasField(instance, "field2"); // expect: false
+print hasField(instance, "field3"); // expect: false

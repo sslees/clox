@@ -54,7 +54,8 @@ bool strNative(int argc, Value* argv) {
   Value value = *argv;
   if (IS_STRING(value)) NATIVE_RETURN(value);
   char* str = valToStr(value);
-  if (str == NULL) NATIVE_ERROR("Could not convert argument 1 to a string.");
+  if (str == NULL)
+    NATIVE_ERROR("Could not convert argument 1 of str to a string.");
   NATIVE_RETURN(OBJ_VAL(takeString(str, strlen(str))));
 }
 
@@ -83,9 +84,9 @@ bool getFieldNative(int argc, Value* argv) {
     char* strName = valToStr(argv[1]);
 
     if (strInstance == NULL)
-      NATIVE_ERROR("Could not convert argument 1 to a string.");
+      NATIVE_ERROR("Could not convert argument 1 of getField to a string.");
     if (strName == NULL)
-      NATIVE_ERROR("Could not convert argument 2 to a string.");
+      NATIVE_ERROR("Could not convert argument 2 of getField to a string.");
 
     argv[-1] = getFieldError(strInstance, strName);
     return false;
@@ -103,4 +104,14 @@ bool setFieldNative(int argc, Value* argv) {
 
   NATIVE_RETURN(
       BOOL_VAL(tableSet(&AS_INSTANCE(argv[0])->fields, argv[1], argv[2])));
+}
+
+bool deleteFieldNative(int argc, Value* argv) {
+  ASSERT_ARITY(2);
+  if (!IS_INSTANCE(argv[0]))
+    NATIVE_ERROR("Argument 1 of deleteField must be an instance.");
+  if (!IS_STRING(argv[1]))
+    NATIVE_ERROR("Argument 2 of deleteField must be a string.");
+
+  NATIVE_RETURN(BOOL_VAL(tableDelete(&AS_INSTANCE(argv[0])->fields, argv[1])));
 }
