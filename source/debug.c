@@ -254,3 +254,21 @@ int disassembleInstr(Chunk* chunk, int offset) {
   printf("Unknown opcode %d\n", opcode);
   return offset + 1;
 }
+
+void printTable(Table* table) {
+  for (int i = 0; i < table->capacity; i++) {
+    Entry* entry = &table->entries[i];
+
+    if (IS_EMPTY(entry->key)) {
+      printf("%d: ", i);
+      printValue(entry->key);
+      printf("\n");
+    } else {
+      printf("%d: ", i);
+      printValue(entry->key);
+      printf(" -> ");
+      printValue(entry->value);
+      printf("\n");
+    }
+  }
+}

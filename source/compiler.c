@@ -286,8 +286,7 @@ static uint16_t identifierConstant(Token* name) {
     return (uint16_t)AS_NUMBER(indexValue);
 
   uint16_t index = makeConstant(OBJ_VAL(string));
-  tableSet(
-      &current->stringConstants, OBJ_VAL(string), NUMBER_VAL((double)index));
+  tableSet(&current->stringConstants, OBJ_VAL(string), NUMBER_VAL(index));
   return index;
 }
 
@@ -300,7 +299,7 @@ static uint16_t globalIdentifier(Value identifier) {
   uint16_t newIndex = (uint16_t)vm.globalValues.count;
   push(identifier);
   writeValueArray(&vm.globalValues, UNDEFINED_VAL);
-  tableSet(&vm.globalNames, identifier, NUMBER_VAL((double)newIndex));
+  tableSet(&vm.globalNames, identifier, NUMBER_VAL(newIndex));
   pop();
   return newIndex;
 }

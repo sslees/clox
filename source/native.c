@@ -1,5 +1,6 @@
 #include "native.h"
 
+#include "memory.h"
 #include "object.h"
 #include "value.h"
 
@@ -59,6 +60,11 @@ bool strNative(int argc, Value* argv) {
   NATIVE_RETURN(OBJ_VAL(takeString(str, strlen(str))));
 }
 
+bool hashNative(int argc, Value* argv) {
+  ASSERT_ARITY(1);
+  NATIVE_RETURN(NUMBER_VAL(hashValue(*argv)));
+}
+
 bool hasFieldNative(int argc, Value* argv) {
   ASSERT_ARITY(2);
   if (!IS_INSTANCE(argv[0]))
@@ -81,14 +87,20 @@ bool getFieldNative(int argc, Value* argv) {
 
   if (!tableGet(&AS_INSTANCE(argv[0])->fields, argv[1], &value)) {
     char* strInstance = valToStr(argv[0]);
-    char* strName = valToStr(argv[1]);
 
     if (strInstance == NULL)
       NATIVE_ERROR("Could not convert argument 1 of getField to a string.");
+
+    char* strName = valToStr(argv[1]);
+
     if (strName == NULL)
       NATIVE_ERROR("Could not convert argument 2 of getField to a string.");
 
     argv[-1] = getFieldError(strInstance, strName);
+
+    FREE_ARRAY(char, strInstance, strlen(strInstance) + 1);
+    FREE_ARRAY(char, strName, strlen(strName) + 1);
+
     return false;
   }
 

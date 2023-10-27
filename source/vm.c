@@ -56,7 +56,7 @@ static void defineNative(const char* name, NativeFn function) {
   push(OBJ_VAL(newNative(function)));
   uint16_t index = (uint16_t)vm.globalValues.count;
   writeValueArray(&vm.globalValues, vm.stack[1]);
-  tableSet(&vm.globalNames, vm.stack[0], NUMBER_VAL((double)index));
+  tableSet(&vm.globalNames, vm.stack[0], NUMBER_VAL(index));
   pop();
   pop();
 }
@@ -102,6 +102,7 @@ void initVM() {
 
   defineNative("clock", clockNative);
   defineNative("str", strNative);
+  defineNative("hash", hashNative);
   defineNative("hasField", hasFieldNative);
   defineNative("getField", getFieldNative);
   defineNative("setField", setFieldNative);
@@ -179,9 +180,8 @@ static bool callValue(Value callee, int argCount) {
       case OBJ_CLASS: {
         ObjClass* klass = AS_CLASS(callee);
         vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
-        Value initializer;
-        if (tableGet(&klass->methods, OBJ_VAL(vm.initString), &initializer)) {
-          return call(AS_CLOSURE(initializer), argCount);
+        if (!IS_NIL(klass->initializer)) {
+          return call(AS_CLOSURE(klass->initializer), argCount);
         } else if (argCount != 0) {
           runtimeError("Expected 0 arguments but got %d.", argCount);
           return false;
@@ -277,6 +277,7 @@ static void defineMethod(ObjString* name) {
   Value method = peek0();
   ObjClass* klass = AS_CLASS(peek1());
   tableSet(&klass->methods, OBJ_VAL(name), method);
+  if (name == vm.initString) klass->initializer = method;
   pop();
 }
 
@@ -296,10 +297,7 @@ static void concatenate() {
   result->hash = hashString(result->chars, length);
 
   push(OBJ_VAL(result));
-  tableSet(
-      &vm.strings, OBJ_VAL(result),
-      NIL_VAL); // TODO: any other places where tableSet is called with an
-                // object that could be GC'd?
+  tableSet(&vm.strings, OBJ_VAL(result), NIL_VAL);
   pop();
 
   pop();
@@ -376,10 +374,9 @@ static InterpretResult run() {
       case OP_GET_UPVALUE:
         push(*frame->closure->upvalues[READ_BYTE()]->location);
         break;
-      case OP_SET_UPVALUE: {
+      case OP_SET_UPVALUE:
         *frame->closure->upvalues[READ_BYTE()]->location = peek0();
         break;
-      }
       case OP_GET_PROPERTY: {
         if (!IS_INSTANCE(peek0())) {
           frame->ip = ip;
@@ -541,15 +538,17 @@ static InterpretResult run() {
       }
       case OP_CLASS: push(OBJ_VAL(newClass(READ_STRING()))); break;
       case OP_INHERIT: {
-        Value superclass = peek1();
-        if (!IS_CLASS(superclass)) {
+        Value super = peek1();
+        if (!IS_CLASS(super)) {
           frame->ip = ip;
           runtimeError("Superclass must be a class.");
           return INTERPRET_RUNTIME_ERROR;
         }
 
         ObjClass* subclass = AS_CLASS(peek0());
-        tableAddAll(&AS_CLASS(superclass)->methods, &subclass->methods);
+        ObjClass* superclass = AS_CLASS(super);
+        subclass->initializer = superclass->initializer;
+        tableAddAll(&superclass->methods, &subclass->methods);
         pop();
         break;
       }

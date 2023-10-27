@@ -1,0 +1,31 @@
+print hash(true); // expect: 3
+print hash(false); // expect: 5
+
+print hash(nil); // expect: 7
+
+print hash(-8589934592); // expect: 3975090175
+print hash(-42); // expect: 1716012273
+print hash(-2); // expect: 2603757736
+print hash(-1); // expect: 1268118805
+print hash(-0); // expect: 456222504
+print hash(0); // expect: 456222504
+print hash(1); // expect: 2341886421
+print hash(2); // expect: 1535280781
+print hash(42); // expect: 3225747720
+print hash(8589934592); // expect: 1501725543
+
+print hash(-3.14159); // expect: 353226998
+print hash(-3.14); // expect: 870545592
+print hash(-0.1); // expect: 614407666
+print hash(0.1); // expect: 2520225971
+print hash(3.14); // expect: 2395036227
+print hash(3.14159); // expect: 2292672036
+
+print hash("a"); // expect: 3826002220
+print hash("aa"); // expect: 1277494327
+print hash("aaa"); // expect: 876991330
+print hash("ab"); // expect: 1294271946
+print hash("abc"); // expect: 440920331
+print hash("b"); // expect: 3876335077
+print hash("c"); // expect: 3859557458
+print hash("Hello, World!"); // expect: 1525479220

@@ -4,6 +4,7 @@
 #include "object.h"
 #include "vm.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -40,11 +41,18 @@ char* valToStr(Value value) {
   } else if (IS_NIL(value)) {
     bytes = asprintf(&buff, "nil");
   } else if (IS_NUMBER(value)) {
-    bytes = asprintf(&buff, "%g", AS_NUMBER(value));
+    double d = AS_NUMBER(value);
+
+    if (fmod(d, 1) == 0 && d != 0)
+      bytes = asprintf(&buff, "%ld", (long)d);
+    else
+      bytes = asprintf(&buff, "%g", d);
   } else if (IS_OBJ(value)) {
     bytes = objToStr(&buff, value);
   } else if (IS_EMPTY(value)) {
     bytes = asprintf(&buff, "<empty>");
+  } else if (IS_UNDEFINED(value)) {
+    bytes = asprintf(&buff, "<undefined>");
   }
 #else
   switch (value.type) {
@@ -52,9 +60,18 @@ char* valToStr(Value value) {
       bytes = asprintf(&buff, AS_BOOL(value) ? "true" : "false");
       break;
     case VAL_NIL: bytes = asprintf(&buff, "nil"); break;
-    case VAL_NUMBER: bytes = asprintf(&buff, "%g", AS_NUMBER(value)); break;
+    case VAL_NUMBER: {
+      double d = AS_NUMBER(value);
+
+      if (fmod(d, 1) == 0 && d != 0)
+        bytes = asprintf(&buff, "%ld", (long)d);
+      else
+        bytes = asprintf(&buff, "%g", d);
+      break;
+    }
     case VAL_OBJ: bytes = objToStr(&buff, value); break;
     case VAL_EMPTY: bytes = asprintf(&buff, "<empty>"); break;
+    case VAL_UNDEFINED: bytes = asprintf(&buff, "<undefined>"); break;
   }
 #endif
   if (bytes == -1) return NULL;
@@ -89,7 +106,16 @@ bool valuesEqual(Value a, Value b) {
     case VAL_EMPTY:
     case VAL_NIL: return true;
     case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
-    case VAL_OBJ: return AS_OBJ(a) == AS_OBJ(b);
+    case VAL_OBJ: {
+      if (AS_OBJ(a) == AS_OBJ(b)) return true;
+      if (IS_STRING(a) && IS_STRING(b)) {
+        ObjString* strA = AS_STRING(a);
+        ObjString* strB = AS_STRING(b);
+        return strA->length == strB->length && strA->hash == strB->hash &&
+               memcmp(strA->chars, strB->chars, strA->length) == 0;
+      }
+      return false;
+    }
     default: return false;
   }
 #endif
@@ -103,7 +129,10 @@ static uint32_t hashDouble(double value) {
 
   union BitCast cast;
   cast.value = (value) + 1.0;
-  return cast.ints[0] + cast.ints[1];
+
+  uint32_t hash = cast.ints[0] + cast.ints[1];
+
+  return hashString((char*)&hash, 4);
 }
 
 uint32_t hashValue(Value value) {
@@ -111,15 +140,18 @@ uint32_t hashValue(Value value) {
   if (IS_BOOL(value)) return AS_BOOL(value) ? 3 : 5;
   if (IS_NIL(value)) return 7;
   if (IS_NUMBER(value)) return hashDouble(AS_NUMBER(value));
-  if (IS_OBJ(value)) return AS_STRING(value)->hash;
-  return 0;
+  if (IS_STRING(value)) return AS_STRING(value)->hash;
 #else
   switch (value.type) {
     case VAL_BOOL: return AS_BOOL(value) ? 3 : 5;
     case VAL_NIL: return 7;
     case VAL_NUMBER: return hashDouble(AS_NUMBER(value));
-    case VAL_OBJ: return AS_STRING(value)->hash;
-    case VAL_EMPTY: return 0;
+    case VAL_OBJ:
+      if (IS_STRING(value)) return AS_STRING(value)->hash;
+      break;
+    case VAL_EMPTY:
+    case VAL_UNDEFINED: return 0;
   }
 #endif
+  return 0;
 }

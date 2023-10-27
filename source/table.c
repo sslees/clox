@@ -32,7 +32,7 @@ static Entry* findEntry(Entry* entries, int capacity, Value key) {
       } else {
         if (tombstone == NULL) tombstone = entry;
       }
-    } else if (valuesEqual(entry->key, OBJ_VAL(key))) {
+    } else if (valuesEqual(entry->key, key)) {
       return entry;
     }
 
@@ -83,7 +83,7 @@ bool tableSet(Table* table, Value key, Value value) {
   bool isNewKey = IS_EMPTY(entry->key);
   if (isNewKey && IS_NIL(entry->value)) table->count++;
 
-  entry->key = OBJ_VAL(key);
+  entry->key = key;
   entry->value = value;
   return isNewKey;
 }
