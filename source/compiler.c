@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "scanner.h"
 #include "slots.h"
+#include "vm.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -476,6 +477,28 @@ static void call(bool canAssign __attribute__((unused))) {
   emitCall(argumentList());
 }
 
+static void emitCallsite() {
+  Chunk* chunk = currentChunk();
+
+  if (chunk->callsiteCount == UINT16_COUNT) {
+    error("Too many method calls in one chunk.");
+    return;
+  }
+
+  emitShort(chunk->callsiteCount);
+
+  if (chunk->callsiteCapacity < chunk->callsiteCount + 1) {
+    int oldCapacity = chunk->callsiteCapacity;
+    chunk->callsiteCapacity = GROW_CAPACITY(oldCapacity);
+    chunk->callsites = GROW_ARRAY(
+        Callsite, chunk->callsites, oldCapacity, chunk->callsiteCapacity);
+  }
+
+  Callsite* callsite = &chunk->callsites[chunk->callsiteCount++];
+  callsite->klass = NULL;
+  callsite->method = NULL;
+}
+
 static void dot(bool canAssign) {
   consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
   uint16_t name = identifierConstant(&parser.previous);
@@ -489,6 +512,7 @@ static void dot(bool canAssign) {
     emitOp(OP_INVOKE);
     emitShort(name);
     emitByte(argCount);
+    emitCallsite();
   } else {
     emitOp(OP_GET_PROPERTY);
     emitShort(name);
@@ -642,6 +666,7 @@ static void super_(bool canAssign __attribute__((unused))) {
     emitOp(OP_SUPER_INVOKE);
     emitShort(name);
     emitByte(argCount);
+    emitCallsite();
   } else {
     namedVariable(syntheticToken("super"), false);
     emitOp(OP_GET_SUPER);

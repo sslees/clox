@@ -12,12 +12,16 @@ void initChunk(Chunk* chunk) {
   chunk->lineCount = 0;
   chunk->lineCapacity = 0;
   chunk->lines = NULL;
+  chunk->callsiteCount = 0;
+  chunk->callsiteCapacity = 0;
+  chunk->callsites = NULL;
   initValueArray(&chunk->constants);
 }
 
 void freeChunk(Chunk* chunk) {
   FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
   FREE_ARRAY(LineStart, chunk->lines, chunk->lineCapacity);
+  FREE_ARRAY(Callsite, chunk->callsites, chunk->callsiteCapacity);
   freeValueArray(&chunk->constants);
   initChunk(chunk);
 }

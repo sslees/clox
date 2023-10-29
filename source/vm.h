@@ -2,8 +2,6 @@
 #define CLOX_VM_H
 
 #include "object.h"
-#include "table.h"
-#include "value.h"
 
 typedef struct {
   ObjClosure* closure;

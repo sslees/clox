@@ -4,6 +4,8 @@
 #include "common.h"
 #include "value.h"
 
+typedef struct Callsite Callsite;
+
 typedef enum {
   OP_CONSTANT,
   OP_NIL,
@@ -73,6 +75,9 @@ typedef struct {
   int lineCount;
   int lineCapacity;
   LineStart* lines;
+  int callsiteCount;
+  int callsiteCapacity;
+  Callsite* callsites;
   ValueArray constants;
 } Chunk;
 

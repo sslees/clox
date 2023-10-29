@@ -203,16 +203,28 @@ static bool callValue(Value callee, int argCount) {
   return false;
 }
 
-static bool invokeFromClass(ObjClass* klass, ObjString* name, int argCount) {
-  Value method;
-  if (!tableGet(&klass->methods, OBJ_VAL(name), &method)) {
-    runtimeError("Undefined property '%s'.", name->chars);
-    return false;
+static bool invokeFromClass(
+    ObjClass* klass, ObjString* name, int argCount, Callsite* callsite) {
+  if (callsite->klass == klass) {
+    return call(callsite->method, argCount);
+  } else {
+    Value methodVal;
+
+    if (!tableGet(&klass->methods, OBJ_VAL(name), &methodVal)) {
+      runtimeError("Undefined property '%s'.", name->chars);
+      return false;
+    }
+
+    ObjClosure* method = AS_CLOSURE(methodVal);
+
+    callsite->klass = klass;
+    callsite->method = method;
+
+    return call(method, argCount);
   }
-  return call(AS_CLOSURE(method), argCount);
 }
 
-static bool invoke(ObjString* name, int argCount) {
+static bool invoke(ObjString* name, int argCount, Callsite* callsite) {
   Value receiver = peek(argCount);
 
   if (!IS_INSTANCE(receiver)) {
@@ -228,7 +240,7 @@ static bool invoke(ObjString* name, int argCount) {
     return callValue(value, argCount);
   }
 
-  return invokeFromClass(instance->klass, name, argCount);
+  return invokeFromClass(instance->klass, name, argCount, callsite);
 }
 
 static bool bindMethod(ObjClass* klass, ObjString* name) {
@@ -312,6 +324,8 @@ static InterpretResult run() {
 #define READ_SHORT() (ip += 2, (uint16_t)(ip[-2] | ip[-1] << 8))
 #define READ_CONSTANT() \
   (frame->closure->function->chunk.constants.values[READ_SHORT()])
+#define READ_CALLSITE() \
+  (&frame->closure->function->chunk.callsites[READ_SHORT()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
   do { \
@@ -487,8 +501,10 @@ static InterpretResult run() {
       case OP_INVOKE: {
         ObjString* method = READ_STRING();
         int argCount = READ_BYTE();
+        Callsite* callsite = READ_CALLSITE();
         frame->ip = ip;
-        if (!invoke(method, argCount)) return INTERPRET_RUNTIME_ERROR;
+        if (!invoke(method, argCount, callsite))
+          return INTERPRET_RUNTIME_ERROR;
         frame = &vm.frames[vm.frameCount - 1];
         ip = frame->ip;
         break;
@@ -496,9 +512,10 @@ static InterpretResult run() {
       case OP_SUPER_INVOKE: {
         ObjString* method = READ_STRING();
         int argCount = READ_BYTE();
+        Callsite* callsite = READ_CALLSITE();
         ObjClass* superclass = AS_CLASS(pop());
         frame->ip = ip;
-        if (!invokeFromClass(superclass, method, argCount))
+        if (!invokeFromClass(superclass, method, argCount, callsite))
           return INTERPRET_RUNTIME_ERROR;
         frame = &vm.frames[vm.frameCount - 1];
         ip = frame->ip;
@@ -610,6 +627,7 @@ static InterpretResult run() {
 #undef READ_BYTE
 #undef READ_SHORT
 #undef READ_CONSTANT
+#undef READ_CALLSITE
 #undef READ_STRING
 #undef BINARY_OP
 }

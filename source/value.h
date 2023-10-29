@@ -3,12 +3,12 @@
 
 #include "common.h"
 
-#include <string.h>
-
 typedef struct Obj Obj;
 typedef struct ObjString ObjString;
 
 #ifdef NAN_BOXING
+
+#include <string.h>
 
 #define SIGN_BIT ((uint64_t)0x8000000000000000)
 #define QNAN ((uint64_t)0x7FFC000000000000)
@@ -23,7 +23,7 @@ typedef uint64_t Value;
 
 #define IS_BOOL(value) (((value) | 1) == TRUE_VAL)
 #define IS_NIL(value) ((value) == NIL_VAL)
-#define IS_NUMBER(value) (((value)&QNAN) != QNAN)
+#define IS_NUMBER(value) (((value) & QNAN) != QNAN)
 #define IS_OBJ(value) (((value) & (QNAN | SIGN_BIT)) == (QNAN | SIGN_BIT))
 #define IS_EMPTY(value) ((value) == EMPTY_VAL)
 #define IS_UNDEFINED(value) ((value) == UNDEFINED_VAL)

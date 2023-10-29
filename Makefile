@@ -7,13 +7,14 @@ DFLAGS = -O0 -g3 --coverage -DDEBUG -DDEBUG_CHECK_STACK -DDEBUG_STRESS_GC
 PFLAGS = -O0 -g3 -pg
 RFLAGS = -O3 -flto
 LIBS = -lm
-SCRIPT = examples/fib25.lox
 
 HDRS := $(wildcard source/*.h)
 SRCS := $(wildcard source/*.c)
 OBJS := $(notdir $(SRCS:.c=.o))
 DEPS := $(OBJS:.o=.d)
 
+CLANG_FORMAT = $(wildcard $(HOME)/.vscode/extensions/ms-vscode.cpptools-*/LLVM/bin/clang-format)
+SCRIPT = examples/fib25.lox
 TESTS = $(HOME)/downloads/craftinginterpreters/test
 TEST = cd $(TESTS)/..; dart tool/bin/test.dart clox --interpreter $(CURDIR)/$(1)
 BENCH = find bench -type f -exec echo -n {} " " \; -exec $(1) {} \;
@@ -94,7 +95,7 @@ bench: build/release/$(NAME)
 		awk '{t+=$$2;printf"%-25s %7.3f s\n",$$1,$$2}END{printf"%-25s %7.3f s\n","BENCHMARK TOTAL",t}'
 
 format:
-	@clang-format -i source/*.c source/*.h
+	@$(CLANG_FORMAT) -i source/*.c source/*.h
 
 run: $(NAME)
 	./$<

@@ -85,6 +85,11 @@ typedef struct {
   Table methods;
 } ObjClass;
 
+struct Callsite {
+  ObjClass* klass;
+  ObjClosure* method;
+};
+
 typedef struct {
   Obj obj;
   ObjClass* klass;
