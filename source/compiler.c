@@ -550,6 +550,8 @@ static void grouping(bool canAssign __attribute__((unused))) {
 
 static void number(bool canAssign __attribute__((unused))) {
   double value = strtod(parser.previous.start, NULL);
+
+#ifndef NO_CONSTANT_OPS
   if (value == 0) {
     emitOp(OP_CONSTANT_ZERO);
   } else if (value == 1) {
@@ -565,6 +567,9 @@ static void number(bool canAssign __attribute__((unused))) {
   } else {
     emitConstant(NUMBER_VAL(value));
   }
+#else
+  emitConstant(NUMBER_VAL(value));
+#endif
 }
 
 static void or_(bool canAssign __attribute__((unused))) {

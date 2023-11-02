@@ -441,6 +441,7 @@ static InterpretResult run() {
           put(NUMBER_VAL(AS_NUMBER(a) + AS_NUMBER(b)));
         } else if (IS_STRING(a) && IS_STRING(b)) {
           concatenate();
+#ifndef NO_IMPLICIT_STR_CONVERT
         } else if (IS_STRING(a)) {
           push(b);
           strNative(1, vm.stackTop - 1);
@@ -451,6 +452,7 @@ static InterpretResult run() {
           strNative(1, vm.stackTop - 1);
           put(b);
           concatenate();
+#endif
         } else {
           frame->ip = ip;
           runtimeError("Operands must be two numbers or two strings.");
